@@ -3,6 +3,16 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
+
+-- An edit-mode preview left in the place (see Preview) is replaced by the real thing.
+for _, container in { workspace, ServerStorage } do
+	for _, child in (container :: Instance):GetChildren() do
+		if child:GetAttribute("EditPreview") then
+			child:Destroy()
+		end
+	end
+end
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
@@ -26,6 +36,7 @@ local MapGrid = require(script.Parent.MapGrid)
 local Party = require(script.Parent.Party)
 local Secrets = require(script.Parent.Secrets)
 local Setup = require(script.Parent.Setup)
+local Shop = require(script.Parent.Shop)
 local StateSync = require(script.Parent.StateSync)
 local Table = require(script.Parent.Table)
 local TableMap = require(script.Parent.TableMap)
@@ -82,6 +93,7 @@ Party.init()
 Arrival.init() -- after the Parlor exists: porch, door, and the walk up from the truck
 Basement.init() -- follows the Crawlspace wherever it is placed
 Lanterns.init()
+Shop.init()
 
 GameState.Changed:Connect(function()
 	StateSync.broadcast()

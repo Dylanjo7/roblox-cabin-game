@@ -1,10 +1,13 @@
 --!strict
--- Lobby client: a hint line at the top and short messages from the server (trucks, teleports).
+-- Lobby client: a hint line at the top, short messages from the server (trucks, teleports), and
+-- the supplies panel at the front desk.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+
+local ShopUI = require(script.Parent.ShopUI)
 
 local screen = Instance.new("ScreenGui")
 screen.Name = "LobbyHud"
@@ -33,6 +36,7 @@ local hint = label("Hint", 8, 34)
 hint.Text = `HOLLOW PINES  ·  Step onto the pad behind a truck to ride up to the cabin (1 to {Config.MaxPlayers} players).`
 local toast = label("Toast", 48, 30)
 toast.Visible = false
+ShopUI.init(screen)
 screen.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
 
 local token = 0

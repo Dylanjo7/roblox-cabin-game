@@ -121,6 +121,8 @@ function HollowManRig.pose(rig: Rig, pivot: CFrame, dt: number, speed: number, c
 		ForeL = CFrame.Angles(0.15 + 0.2 * s + c * 0.35, 0, 0),
 		ForeR = CFrame.Angles(0.15 + 0.2 * s + c * 0.35, 0, 0),
 		Neck = CFrame.Angles(-0.1 * c + breathe * 0.03, rig.headYaw, rig.headRoll),
+		-- His jaw hangs slack, working slowly; it gapes when he's after you.
+		Jaw = CFrame.Angles(-(0.12 + c * 0.45 + (math.sin(t * 0.8) * 0.5 + 0.5) * 0.08), 0, math.sin(t * 0.5) * 0.04),
 	}
 
 	local xf: { [string]: CFrame } = { Root = CFrame.new(0, bob, 0) }

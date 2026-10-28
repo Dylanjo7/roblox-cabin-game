@@ -7,6 +7,7 @@
 --     him and his head snaps round to you, then he's gone.
 --   The face: when you're caught in an event, his face fills the screen.
 --   The book: late in the night, opening the Journal, something has written in it.
+--   Bought: someone paid (Journal > Favours) to put his face on your screen; you're told who.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -17,9 +18,11 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local CardData = require(Shared:WaitForChild("CardData"))
 local Config = require(Shared:WaitForChild("Config"))
 local RoomShapes = require(Shared:WaitForChild("RoomShapes"))
+local Remotes = require(Shared:WaitForChild("Remotes"))
 local Types = require(Shared:WaitForChild("Types"))
 
 local Audio = require(script.Parent.Audio)
+local Hud = require(script.Parent.Hud)
 local HollowManRig = require(script.Parent.HollowManRig)
 local HollowManView = require(script.Parent.HollowManView)
 local JournalUI = require(script.Parent.JournalUI)
@@ -238,6 +241,23 @@ function Scares.init(gui: ScreenGui)
 	black.ZIndex = 2
 	black.Parent = faceGui
 	faceGui.Parent = gui.Parent
+
+	-- Bought for you by someone else: his face, whatever you're doing, then who it was.
+	Remotes.event("Scare").OnClientEvent:Connect(function(kind: any, from: any)
+		if kind ~= "face" then
+			return
+		end
+		task.spawn(function()
+			while busy do
+				task.wait(0.1)
+			end
+			face()
+			task.wait(Config.Shop.ScareRevealSeconds)
+			if typeof(from) == "string" then
+				Hud.toast(`That was {from}.`)
+			end
+		end)
+	end)
 
 	-- The book: after midnight on his clock, sometimes something has written in it.
 	JournalUI.Opened:Connect(function()

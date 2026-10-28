@@ -133,6 +133,13 @@ RULES.md is the source of truth. MVP only for now.
   - Jump scares (`Scares`, `Config.Scares`): behind you when you spin round, him in a room's far corner facing the wall (head snaps round when you look), his face full-screen when you're caught, red scrawl in the Journal after midnight
   - Trees no longer poke through walls (each pine's needles stay inside its own cell)
   - Front door redone: dark oak, raised panels, four-pane window, strap hinges, knocker
+- [x] K. Scarier Hollow Man, trucks, 5-truck lobby, shop, edit preview, the drive up *(written, not yet run in Studio)*
+  - Hollow Man rebuilt: stooped, long crooked neck, head tipped, split grin with uneven teeth and a hanging jaw (animated; gapes when chasing), ember pinpoint eyes, nose slits, cracked skin, ribs through the coat, dead pine branches out of his back, clawed five-fingered hands, bare feet
+  - `TruckModel`: old two-tone pickup (rust, mud, chrome, round headlights, cab interior, bed, tailgate); the cabin's truck is dead with its hood up and steaming
+  - Lobby: 5 trucks (each its own lobby/server), log station with stone foundation and corner log ends, porch with sign, lantern and notice board, firepit, woodpile, flagpole, bays, lamp posts, gated road, tiered pines, haze + colour grade
+  - Shop (`Config.Shop`, ids 0 until made on the Creator Dashboard): Lantern Colours pass (flame colours; Journal > Favours), Scare a Friend product (their screen; they're told who), Light a Candle product (memorial shelf at the ranger station, with your name). Lobby: Supplies at the front desk
+  - Edit-mode preview: `require(game.ServerScriptService.Server.Preview).build()` / `.save()` / `.clear()`; room decorations saved to ServerStorage.RoomDecor follow their room every run
+  - The drive up (`Trip`, `Story.Trip`): ~30 s cinematic with dialogue on arrival, skippable
 - [ ] C2: clue signs in rooms (lullaby audio still to find)
 - [ ] C3: Journal (M)
 - Clue decisions: the 9 defaults agreed on 2026-10-28 (sign placement, sign shown only while active, second copy re-rolls the spot, Tally 3 rooms 1-5 marks, Doll always appears/fake frowns after 3rd true clue, shared Journal with "Record" prompt, manual cross-out, exits not in deck yet, faked mirror)

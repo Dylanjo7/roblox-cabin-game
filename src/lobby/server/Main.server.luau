@@ -1,6 +1,6 @@
 --!strict
--- Lobby place boot: builds the ranger station and runs the trucks. Standing on a truck's pad
--- puts you in its group (1 to Config.MaxPlayers). The truck leaves when it's full, or
+-- Lobby place boot: builds the ranger station and runs the trucks (Config.Lobby.Trucks, each its
+-- own lobby). Standing on a truck's pad puts you in its group (1 to Config.MaxPlayers). The truck leaves when it's full, or
 -- Config.Lobby.DepartSeconds after the first person gets on: the server reserves a private
 -- server of the cabin place and teleports the group there together, with the party's UserIds
 -- as teleport data (the cabin waits for all of them; see src/server/Party.luau).
@@ -13,9 +13,11 @@ local TeleportService = game:GetService("TeleportService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 
+local LobbyShop = require(script.Parent.LobbyShop)
 local Station = require(script.Parent.Station)
 
 type Queue = {
+	index: number,
 	truck: Station.Truck,
 	members: { Player },
 	departAt: number?, -- os.clock() when it leaves; nil while empty
@@ -30,16 +32,41 @@ local function notify(player: Player, text: string)
 	notifyRemote:FireClient(player, text)
 end
 
+-- Blue hour in the pines: a low haze, warm lamps, colour pulled down a little.
 Lighting.ClockTime = Config.Lobby.ClockTime
-Lighting.Brightness = 1
-Lighting.Ambient = Color3.fromRGB(60, 56, 64)
-Lighting.OutdoorAmbient = Color3.fromRGB(70, 66, 80)
-Lighting.FogColor = Color3.fromRGB(40, 40, 52)
-Lighting.FogEnd = 320
+Lighting.Brightness = 1.3
+Lighting.Ambient = Color3.fromRGB(54, 52, 62)
+Lighting.OutdoorAmbient = Color3.fromRGB(66, 64, 82)
+local haze = Instance.new("Atmosphere")
+haze.Density = 0.36
+haze.Offset = 0.15
+haze.Color = Color3.fromRGB(150, 150, 170)
+haze.Decay = Color3.fromRGB(70, 74, 96)
+haze.Glare = 0
+haze.Haze = 1.8
+haze.Parent = Lighting
+local grade = Instance.new("ColorCorrectionEffect")
+grade.Saturation = -0.15
+grade.Contrast = 0.08
+grade.TintColor = Color3.fromRGB(236, 238, 255)
+grade.Parent = Lighting
+local bloom = Instance.new("BloomEffect")
+bloom.Intensity = 0.6
+bloom.Size = 30
+bloom.Threshold = 1.3
+bloom.Parent = Lighting
+
+-- An edit-mode preview of the station (see src/server/Preview.luau) is replaced by the real one.
+local leftover = workspace:FindFirstChild("RangerStation")
+if leftover then
+	leftover:Destroy()
+end
+local built = Station.build()
+LobbyShop.init(built)
 
 local queues: { Queue } = {}
-for _, truck in Station.build() do
-	table.insert(queues, { truck = truck, members = {}, departAt = nil, leaving = false })
+for i, truck in built.trucks do
+	table.insert(queues, { index = i, truck = truck, members = {}, departAt = nil, leaving = false })
 end
 
 local teleporting: { [Player]: boolean } = {}
@@ -68,12 +95,12 @@ local function setBoard(queue: Queue)
 	local max = Config.MaxPlayers
 	local text
 	if queue.leaving then
-		text = "Heading up to the cabin..."
+		text = `TRUCK {queue.index}\nHeading up to the cabin...`
 	elseif n == 0 then
-		text = `Stand on the pad to ride\n0/{max}`
+		text = `TRUCK {queue.index}\nStand on the pad to ride · 0/{max}`
 	else
 		local left = math.max(0, math.ceil((queue.departAt or os.clock()) - os.clock()))
-		text = `{n}/{max} aboard · leaving in {left}s`
+		text = `TRUCK {queue.index}\n{n}/{max} aboard · leaving in {left}s`
 	end
 	queue.truck.label.Text = text
 end

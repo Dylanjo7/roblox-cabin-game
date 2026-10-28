@@ -6,10 +6,26 @@ local Story = {}
 
 Story.Title = "HOLLOW PINES"
 
--- Short lines while you walk up from the truck.
+-- The drive up (client/Trip), about 30 seconds. `at` is seconds from the start; each line stays up
+-- until the next one, or for `hold` seconds when that isn't 0. Speakers: the old driver who brought you, and his
+-- radio.
+Story.Trip = {
+	{ at = 5.6, speaker = "Driver", line = "Don't get many folks wanting to go up to Hollow Pines. Not after dark.", hold = 0 },
+	{ at = 9.2, speaker = "Driver", line = "Ranger says the road's shut past the lake. I'll take you as far as the cabin path, no further.", hold = 0 },
+	{ at = 12.6, speaker = "Radio", line = "...unit four... anyone on this channel... do not stop for anyone on the—", hold = 2.2 },
+	{ at = 16.4, speaker = "Driver", line = "...You see that? Somebody standing out there in the trees.", hold = 3.4 },
+	{ at = 21.4, speaker = "Driver", line = "No, no, no. Come on, girl. Not here.", hold = 0 },
+	{ at = 24.4, speaker = "Driver", line = "Engine's gone. Cabin's just up the path. Go on. I'll radio for help.", hold = 3.2 },
+}
+
+-- Short lines while you walk up from the truck (after the drive up, Story.ArrivalAfterTrip).
 Story.Arrival = {
 	"Route 9. Past the last gas station, the radio turned to static and the pines closed over the road.",
 	"The truck died a mile short of the lake. There's a cabin up the path. Its door is open.",
+	"Somebody left the porch light on.",
+}
+Story.ArrivalAfterTrip = {
+	"The driver's door hangs open. The radio hisses. He's gone.",
 	"Somebody left the porch light on.",
 }
 

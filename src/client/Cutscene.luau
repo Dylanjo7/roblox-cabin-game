@@ -141,17 +141,18 @@ function Cutscene.playEnding(key: string)
 end
 
 -- Arriving by the truck: the screen fades up from black, then the arrival lines appear one by
--- one low on the screen while you walk.
-function Cutscene.playArrival()
+-- one low on the screen while you walk. afterTrip: the drive up (Trip) just played, so no title
+-- and the lines that follow on from it.
+function Cutscene.playArrival(afterTrip: boolean?)
 	-- Shares the token with play(): if the intro starts (you got inside fast), this stops.
 	playToken += 1
 	local token = playToken
 	overlay.Visible = true
 	overlay.BackgroundTransparency = 0
 	title.Text = Story.Title
-	title.TextTransparency = 0
+	title.TextTransparency = if afterTrip then 1 else 0
 	task.spawn(function()
-		task.wait(1.5)
+		task.wait(if afterTrip then 0.3 else 1.5)
 		if token ~= playToken then
 			return
 		end
@@ -162,7 +163,7 @@ function Cutscene.playArrival()
 			return
 		end
 		overlay.Visible = false
-		for _, entry in Story.Arrival do
+		for _, entry in (if afterTrip then Story.ArrivalAfterTrip else Story.Arrival) do
 			if token ~= playToken then
 				return
 			end

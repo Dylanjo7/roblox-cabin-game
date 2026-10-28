@@ -26,6 +26,7 @@ local Reflections = require(script.Parent.Reflections)
 local RoomRise = require(script.Parent.RoomRise)
 local Scares = require(script.Parent.Scares)
 local TablePieces = require(script.Parent.TablePieces)
+local Trip = require(script.Parent.Trip)
 
 local gui = Hud.init()
 HandUI.init(gui)
@@ -75,7 +76,11 @@ local function setState(state)
 	-- ending when a run is over.
 	local doorClosed = state.arrival ~= nil and state.arrival.doorClosed
 	if doorWasClosed == nil and not doorClosed then
-		Cutscene.playArrival()
+		-- The drive up first, then you're standing by the dead truck.
+		task.spawn(function()
+			Trip.play()
+			Cutscene.playArrival(true)
+		end)
 	elseif doorWasClosed == false and doorClosed then
 		Cutscene.playIntro()
 	end

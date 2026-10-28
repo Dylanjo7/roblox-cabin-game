@@ -226,7 +226,7 @@ local Config = {
 
 	-- The ranger station lobby place.
 	Lobby = {
-		Trucks = 2, -- each truck takes one group of 1 to MaxPlayers
+		Trucks = 5, -- each truck is its own lobby: one group of 1 to MaxPlayers, sent to its own cabin server
 		DepartSeconds = 15, -- once someone climbs on, the truck leaves after this (or as soon as it's full)
 		TeleportRetries = 1, -- a failed teleport is tried again this many times per player
 		ClockTime = 19.6, -- dusk
@@ -255,6 +255,22 @@ local Config = {
 		CornerWaitSeconds = 10, -- he waits in the corner this long for you to notice him
 		FaceSeconds = 0.55, -- his face when you're caught in an event
 		JournalChance = 0.15, -- opening the Journal once he's past midnight
+	},
+
+	-- Robux items. Make them on the Creator Dashboard (your experience > Monetization) and put
+	-- their ids here; 0 = not set up yet (the item says so instead of opening a purchase).
+	-- Cosmetic and pranks only: nothing you can buy helps you escape.
+	Shop = {
+		LanternColoursPass = 0, -- game pass: change your lantern's flame
+		ScareProduct = 0, -- developer product: the Hollow Man's face on a friend's screen
+		OfferingProduct = 0, -- developer product: light a memorial candle with your name at the ranger station
+		LanternColours = {
+			{ id = "ember", name = "Ember", color = Color3.fromRGB(255, 170, 70), free = true },
+			{ id = "witchfire", name = "Witchfire", color = Color3.fromRGB(90, 255, 120), free = false },
+			{ id = "cold", name = "Cold Light", color = Color3.fromRGB(120, 180, 255), free = false },
+			{ id = "blood", name = "Blood Moon", color = Color3.fromRGB(255, 50, 40), free = false },
+		},
+		ScareRevealSeconds = 2, -- how long before the scared player is told who paid for it
 	},
 
 	-- Everyone's lantern (key 1 to hold it up).

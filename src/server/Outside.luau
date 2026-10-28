@@ -7,13 +7,12 @@
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local TruckModel = require(Shared:WaitForChild("TruckModel"))
 
 local TRIM = Config.Outside.Trim
 local DECK = Color3.fromRGB(86, 70, 56)
-local RUST = Color3.fromRGB(110, 54, 36)
-local TYRE = Color3.fromRGB(24, 22, 22)
-local GLASS = Color3.fromRGB(30, 36, 42)
 local GRAVEL = Color3.fromRGB(62, 60, 56)
 local WARM = Color3.fromRGB(255, 196, 128)
 
@@ -31,45 +30,6 @@ local function part(parent: Instance, name: string, size: Vector3, cf: CFrame, c
 	p.BottomSurface = Enum.SurfaceType.Smooth
 	p.Parent = parent
 	return p
-end
-
-local function wheel(parent: Instance, cf: CFrame)
-	local tyre = part(parent, "Tyre", Vector3.new(1.2, 3, 3), cf, TYRE, Enum.Material.Rubber)
-	tyre.Shape = Enum.PartType.Cylinder
-	local hub = part(parent, "Hub", Vector3.new(1.3, 1.4, 1.4), cf, Color3.fromRGB(120, 116, 110), Enum.Material.Metal)
-	hub.Shape = Enum.PartType.Cylinder
-end
-
--- An old pickup, facing -Z (towards the cabin), pivot at the ground under its middle.
-local function truck(parent: Instance, at: CFrame)
-	local m = Instance.new("Model")
-	m.Name = "Truck"
-	part(m, "Chassis", Vector3.new(6, 1, 15), at * CFrame.new(0, 1.8, 0), Color3.fromRGB(30, 28, 28), Enum.Material.Metal)
-	part(m, "Hood", Vector3.new(5.6, 2.2, 4.6), at * CFrame.new(0, 3.4, -5), RUST, Enum.Material.Metal)
-	part(m, "Grille", Vector3.new(4.6, 1.8, 0.3), at * CFrame.new(0, 3.2, -7.4), Color3.fromRGB(150, 146, 140), Enum.Material.Metal)
-	part(m, "Bumper", Vector3.new(6.2, 0.6, 0.6), at * CFrame.new(0, 2.1, -7.6), Color3.fromRGB(150, 146, 140), Enum.Material.Metal)
-	part(m, "Cab", Vector3.new(5.8, 4, 4.4), at * CFrame.new(0, 4.3, -0.6), RUST, Enum.Material.Metal)
-	part(m, "Windshield", Vector3.new(5, 2, 0.2), at * CFrame.new(0, 5.2, -2.85), GLASS, Enum.Material.Glass).Transparency = 0.3
-	for _, x in { -2.95, 2.95 } do
-		part(m, "SideWindow", Vector3.new(0.2, 1.8, 3), at * CFrame.new(x, 5.2, -0.6), GLASS, Enum.Material.Glass).Transparency = 0.3
-	end
-	part(m, "Bed", Vector3.new(5.8, 2, 6.4), at * CFrame.new(0, 3.3, 4.6), RUST, Enum.Material.Metal)
-	part(m, "BedFloor", Vector3.new(5, 0.3, 5.8), at * CFrame.new(0, 3.9, 4.6), Color3.fromRGB(70, 60, 50), Enum.Material.WoodPlanks)
-	part(m, "Tarp", Vector3.new(4.6, 1.4, 3), at * CFrame.new(0.2, 4.7, 5.4) * CFrame.Angles(0, 0, math.rad(4)), Color3.fromRGB(60, 70, 50), Enum.Material.Fabric)
-	for _, x in { -2.9, 2.9 } do
-		wheel(m, at * CFrame.new(x, 1.5, -4.8))
-		wheel(m, at * CFrame.new(x, 1.5, 4.6))
-		local headlamp = part(m, "Headlight", Vector3.new(1, 1, 0.3), at * CFrame.new(x * 0.75, 3.4, -7.45), Color3.fromRGB(255, 236, 190), Enum.Material.Neon)
-		local beam = Instance.new("SpotLight")
-		beam.Face = Enum.NormalId.Front
-		beam.Angle = 50
-		beam.Range = 50
-		beam.Brightness = 1.6
-		beam.Color = Color3.fromRGB(255, 230, 190)
-		beam.Shadows = true
-		beam.Parent = headlamp
-	end
-	m.Parent = parent
 end
 
 local function porch(parent: Instance, doorX: number, wallZ: number, floorY: number)
@@ -155,7 +115,14 @@ function Outside.build(): (Folder, CFrame)
 	local length = Config.Outside.PathLength
 	part(folder, "Path", Vector3.new(5, 0.1, length), CFrame.new(doorX, 0.05, pathStart + length / 2), GRAVEL, Enum.Material.Pebble).CanCollide = false
 	sign(folder, CFrame.new(doorX - 5, 0, pathStart + length * 0.45) * CFrame.Angles(0, math.rad(-70), 0))
-	truck(folder, CFrame.new(doorX + 5, 0, pathStart + length + 2) * CFrame.Angles(0, math.rad(8), 0))
+	-- The truck that brought you: it died at the end of the path, hood up and steaming, headlights still on.
+	local truck = TruckModel.build(CFrame.new(doorX + 5, 0, pathStart + length + 2) * CFrame.Angles(0, math.rad(8), 0), {
+		body = Color3.fromRGB(112, 58, 40),
+		trim = Color3.fromRGB(196, 186, 160),
+		broken = true,
+		cargo = true,
+	})
+	truck.Parent = folder
 
 	local spawnAt = CFrame.lookAt(Vector3.new(doorX, 0.6, pathStart + length - 2), Vector3.new(doorX, 0.6, wallZ))
 	folder.Parent = workspace

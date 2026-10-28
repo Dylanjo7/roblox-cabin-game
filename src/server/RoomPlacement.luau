@@ -5,6 +5,7 @@
 -- Cell (x, z) spawns at Parlor position + (x*TileSize, 0, z*TileSize).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local CardData = require(Shared:WaitForChild("CardData"))
@@ -121,11 +122,34 @@ local function refreshSides(cell: MapGrid.Cell)
 	end
 end
 
+-- Your own decorations for this room (ServerStorage.RoomDecor.<room id>, saved from the edit-mode
+-- preview, see Preview): copied into the room in a "Decor" folder, positioned relative to it, so
+-- they turn and move with the room wherever it's built.
+local function addDecor(model: Model, id: string)
+	local store = ServerStorage:FindFirstChild("RoomDecor")
+	local saved = store and store:FindFirstChild(id)
+	if not saved then
+		return
+	end
+	local folder = Instance.new("Folder")
+	folder.Name = "Decor"
+	local pivot = model:GetPivot()
+	for _, item in saved:GetChildren() do
+		if item:IsA("PVInstance") then
+			local copy = item:Clone() :: PVInstance
+			copy:PivotTo(pivot * item:GetPivot()) -- saved relative to the room
+			copy.Parent = folder
+		end
+	end
+	folder.Parent = model
+end
+
 -- Spawn the room in the world and record it on the map. Callers validate first
 -- (the Parlor is the only room placed without a neighbour).
 function RoomPlacement.place(id: string, x: number, z: number, rotation: number): Model
 	local def = CardData.get(id)
 	local model = RoomBuilder.template(id):Clone()
+	addDecor(model, id)
 	model.Name = `{def.name} ({x},{z})`
 	model:PivotTo(CFrame.new(RoomShapes.cellPosition(x, z)) * RoomShapes.rotationCFrame(rotation))
 

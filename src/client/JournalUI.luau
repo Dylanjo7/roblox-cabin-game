@@ -4,8 +4,12 @@
 -- results to tick off (click to cycle found / ruled out / unknown, shared with everyone; recording
 -- a sign marks it found), the signs recorded so far with the tally sum, and the 8 ways out with
 -- their three clues. Ways out that no longer fit what you've marked fade; click one to cross it
--- out for the whole group. Turn pages with the arrows at the bottom or the Left/Right keys.
+-- out for the whole group. The last page, "Favours", is where the Robux items are (Config.Shop):
+-- your lantern's flame colour, and scaring a friend. Turn pages with the arrows at the bottom or
+-- the Left/Right keys.
 
+local MarketplaceService = game:GetService("MarketplaceService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -39,7 +43,10 @@ local nextButton: TextButton
 local scrawlLabel: TextLabel
 local journal: Types.JournalPublic = { entries = {}, crossed = {}, marks = {} }
 local spread = 1
-local SPREADS = 3
+local SPREADS = 4
+local CLUE_SPREAD = 3
+local localPlayer = Players.LocalPlayer
+local prices: { [string]: number } = {} -- "pass" / "scare" -> Robux, once known
 
 local function text(parent: Instance, value: string, size: number, font: Enum.Font, color: Color3, height: number?): TextLabel
 	local l = Instance.new("TextLabel")
@@ -232,6 +239,78 @@ local function cluePages(left: Frame, right: Frame)
 end
 
 ------------------------------------------------------------------------------------------------
+-- Favours: the Robux items, kept quiet at the back of the book.
+
+local function priceText(key: string): string
+	local price = prices[key]
+	return if price then `  ·  R$ {price}` else ""
+end
+
+local function favourButton(p: Frame, label: string, onClick: () -> ())
+	local b = Instance.new("TextButton")
+	add(b)
+	b.Size = UDim2.new(1, 0, 0, 26)
+	b.BackgroundTransparency = 1
+	b.Text = ""
+	b.Parent = p
+	text(b, label, 16, HAND, INK, 26)
+	b.Activated:Connect(function()
+		Audio.play("card", 0.25, nil, 1.4)
+		onClick()
+	end)
+end
+
+local function favourPages(left: Frame, right: Frame)
+	local shop = Config.Shop
+	heading(left, "Favours")
+	add(text(left, "<i>Some things in this house can still be bought. None of them will get you out.</i>", 13, BODY, FADED))
+	add(text(left, "<b>Your lantern's flame</b>", 16, HAND, INK, 22))
+	local owns = localPlayer:GetAttribute("OwnsLanternColours") == true
+	local current = localPlayer:GetAttribute("LanternColour") or "ember"
+	for _, option in shop.LanternColours do
+		local usable = option.free or owns
+		local hex = option.color:ToHex()
+		local mark = if option.id == current then "✓" else "–"
+		local label = `{mark}  <font color="#{hex}">●</font>  {option.name}`
+		if usable then
+			favourButton(left, label, function()
+				Remotes.event("SetLanternColour"):FireServer(option.id)
+			end)
+		else
+			add(text(left, `<font color="#968870">{label}</font>`, 16, HAND, INK, 26))
+		end
+	end
+	if not owns then
+		if shop.LanternColoursPass == 0 then
+			add(text(left, "<i>(The Lantern Colours pass isn't set up yet.)</i>", 13, BODY, FADED))
+		else
+			favourButton(left, `<b>Get the Lantern Colours pass</b>{priceText("pass")}`, function()
+				MarketplaceService:PromptGamePassPurchase(localPlayer, shop.LanternColoursPass)
+			end)
+		end
+	end
+
+	heading(right, "Scare a friend")
+	para(right, "Pick someone. His face will fill their screen, and a moment later they'll find out it was you.")
+	if shop.ScareProduct == 0 then
+		add(text(right, "<i>(Scares aren't set up yet.)</i>", 13, BODY, FADED))
+		return
+	end
+	local others = 0
+	for _, p in Players:GetPlayers() do
+		if p ~= localPlayer then
+			others += 1
+			favourButton(right, `<b>{p.DisplayName}</b>{priceText("scare")}`, function()
+				Remotes.event("RequestScare"):FireServer(p.UserId)
+			end)
+		end
+	end
+	if others == 0 then
+		add(text(right, "<i>Nobody else is here. Yet.</i>", 13, BODY, FADED))
+	end
+end
+
+------------------------------------------------------------------------------------------------
 
 local function render()
 	for _, child in spreadHolder:GetChildren() do
@@ -243,8 +322,10 @@ local function render()
 		rulesOne(left, right)
 	elseif spread == 2 then
 		rulesTwo(left, right)
-	else
+	elseif spread == CLUE_SPREAD then
 		cluePages(left, right)
+	else
+		favourPages(left, right)
 	end
 	pageLabel.Text = `{spread * 2 - 1} – {spread * 2}`
 	prevButton.Visible = spread > 1
@@ -363,6 +444,36 @@ function JournalUI.init(gui: ScreenGui)
 		end
 	end)
 
+	-- The favours page follows who's here, what you own and the prices.
+	local function refresh()
+		if spread == SPREADS then
+			render()
+		end
+	end
+	Players.PlayerAdded:Connect(refresh)
+	Players.PlayerRemoving:Connect(function()
+		task.defer(refresh)
+	end)
+	localPlayer:GetAttributeChangedSignal("OwnsLanternColours"):Connect(refresh)
+	localPlayer:GetAttributeChangedSignal("LanternColour"):Connect(refresh)
+	task.spawn(function()
+		local shop = Config.Shop
+		local function price(key: string, id: number, kind: Enum.InfoType)
+			if id == 0 then
+				return
+			end
+			local ok, info = pcall(function()
+				return MarketplaceService:GetProductInfo(id, kind)
+			end)
+			if ok and typeof(info) == "table" and typeof(info.PriceInRobux) == "number" then
+				prices[key] = info.PriceInRobux
+			end
+		end
+		price("pass", shop.LanternColoursPass, Enum.InfoType.GamePass)
+		price("scare", shop.ScareProduct, Enum.InfoType.Product)
+		refresh()
+	end)
+
 	render()
 end
 
@@ -393,7 +504,7 @@ function JournalUI.setState(state: Types.PublicState)
 		local first = #journal.entries == 0 and #state.journal.entries > 0
 		journal = state.journal
 		if first and not book.Visible then
-			spread = SPREADS -- the first sign recorded: open to our own pages next time
+			spread = CLUE_SPREAD -- the first sign recorded: open to our own pages next time
 		end
 		render()
 	end

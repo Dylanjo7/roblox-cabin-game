@@ -1,7 +1,8 @@
 --!strict
 -- Everyone carries an oil lantern (a Tool in their backpack, key 1 to hold it). It's lit while
 -- you hold it: a warm, shadow-casting light for when an event plunges the cabin into the dark.
--- It isn't tagged RoomLight, so it doesn't flicker with the house lights.
+-- It isn't tagged RoomLight, so it doesn't flicker with the house lights. Its flame is the
+-- player's LanternColour (attribute; set by Shop: Ember, or a colour from the Lantern Colours pass).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -36,6 +37,29 @@ local function piece(tool: Tool, handle: BasePart, name: string, size: Vector3, 
 	weld.Parent = p
 	p.Parent = tool
 	return p
+end
+
+-- The flame colour this player has picked.
+local function colourOf(player: Player): Color3
+	local chosen = player:GetAttribute("LanternColour")
+	for _, option in Config.Shop.LanternColours do
+		if option.id == chosen then
+			return option.color
+		end
+	end
+	return FLAME
+end
+
+-- Recolour a lantern's flame and light.
+local function paint(tool: Instance, colour: Color3)
+	local flame = tool:FindFirstChild("Flame")
+	if flame and flame:IsA("BasePart") then
+		flame.Color = colour
+		local glow = flame:FindFirstChild("Glow")
+		if glow and glow:IsA("PointLight") then
+			glow.Color = colour
+		end
+	end
 end
 
 local function build(): Tool
@@ -84,7 +108,9 @@ local function give(player: Player)
 	if not backpack or backpack:FindFirstChild("Lantern") then
 		return
 	end
-	build().Parent = backpack
+	local tool = build()
+	paint(tool, colourOf(player))
+	tool.Parent = backpack
 	if not told[player] then
 		told[player] = true
 		task.delay(6, function()
@@ -99,6 +125,16 @@ function Lanterns.init()
 	local function onPlayer(player: Player)
 		player.CharacterAdded:Connect(function()
 			give(player)
+		end)
+		-- A new flame colour shows on the lantern straight away, held or not.
+		player:GetAttributeChangedSignal("LanternColour"):Connect(function()
+			local colour = colourOf(player)
+			for _, holder in { player:FindFirstChild("Backpack"), player.Character } do
+				local tool = holder and holder:FindFirstChild("Lantern")
+				if tool then
+					paint(tool, colour)
+				end
+			end
 		end)
 		if player.Character then
 			give(player)
