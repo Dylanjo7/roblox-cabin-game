@@ -44,6 +44,7 @@ local nextButton: TextButton
 local scrawlLabel: TextLabel
 local journal: Types.JournalPublic = { entries = {}, crossed = {}, marks = {} }
 local notes: { number } = {} -- Story.Notes found, in the order they were read
+local difficulty: Types.DifficultyPublic? = nil -- tonight's (the rules pages say how often he moves)
 local spread = 1
 local SPREADS = 5
 local CLUE_SPREAD = 3
@@ -103,6 +104,9 @@ end
 local function rulesOne(left: Frame, right: Frame)
 	heading(left, "How to leave")
 	add(text(left, "<i>Whoever had this book before you didn't get out. Read it anyway.</i>", 14, BODY, FADED))
+	if difficulty and difficulty.id ~= Config.Difficulty.Default then
+		add(text(left, `<b>Tonight is {difficulty.name}.</b> {Config.Difficulty.Levels[difficulty.id].blurb}`, 14, BODY, RED))
+	end
 	para(left, "Stay alive until <b>three o'clock</b>. Work out which room is the way out. Be standing at its door when the clock strikes, and go through.")
 	para(left, "Everything happens at the round table in the Parlor. <b>Everyone has to be sitting</b> before a turn can start. When the box turns to face you it's your turn: press <b>T</b>.")
 	para(left, "<b>On your turn</b>\n1. Take the card sticking out of the box, <i>or</i> take one clue back off the Altar on top of it. Never both.\n2. If you drew an Event, it starts at once.\n3. Play one card from your hand. Once you pick it, you're committed.")
@@ -115,7 +119,7 @@ local function rulesOne(left: Frame, right: Frame)
 end
 
 local function rulesTwo(left: Frame, right: Frame)
-	local turns = Config.HollowMan.TurnsPerMove
+	local turns = if difficulty then difficulty.turnsPerMove else Config.Difficulty.Levels[Config.Difficulty.Default].turnsPerMove
 	local penalty = Config.EliminationHollowSteps * Config.Clock.StepMinutes
 	heading(left, "Him")
 	para(left, `His piece follows our Candle round the table. Every {turns} turns he takes a step: half an hour, then a whole hour at a time once he's past midnight.`)
@@ -126,7 +130,7 @@ local function rulesTwo(left: Frame, right: Frame)
 
 	heading(right, "Three o'clock")
 	para(right, "When the Candle reaches three, every <b>way out</b> that's been built unseals its outside door. Only one of them is real. The rest are his.")
-	para(right, `He comes into the Parlor and hunts. You'll have about {Config.EventSeconds.final_escape} seconds to get to the door you believe in.`)
+	para(right, `He comes in by the front door and hunts. You'll have about {Config.EventSeconds.final_escape} seconds to get to the door you believe in.`)
 	para(right, "The way out has to be <b>built</b> before three. Hold on to those cards, and play them in time.")
 	para(right, "<b>M</b> this book   <b>T</b> start your turn   <b>R</b> turn a room   <b>B</b> the board   <b>1</b> your lantern")
 end
@@ -525,6 +529,12 @@ function JournalUI.scrawl(words: string, seconds: number)
 end
 
 function JournalUI.setState(state: Types.PublicState)
+	if state.difficulty and (difficulty == nil or difficulty.id ~= state.difficulty.id) then
+		difficulty = state.difficulty
+		if spread == 1 or spread == 2 then
+			render()
+		end
+	end
 	if state.notes and #state.notes ~= #notes then
 		notes = state.notes
 		if spread == NOTES_SPREAD then

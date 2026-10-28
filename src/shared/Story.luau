@@ -45,6 +45,7 @@ Story.Beats = {
 	midnight = "Midnight. His steps grow longer.",
 	caught = "He's at the door. Move the Candle, or it goes out.",
 	pushedBack = "For a moment, the footsteps retreat.",
+	three = "Three o'clock. Every lock in the cabin turns at once. So does the front door.",
 }
 
 -- Notes left around the cabin by the four friends on the ranger station's "missing" poster
@@ -62,6 +63,21 @@ Story.Notes = {
 	{ by = "Cal", text = "The real way out isn't the same room twice. That's the trick of it. Believe the clues, not the room you want." },
 	{ by = "Cal", text = "I got out. The truck started on the first try. I drive this road every night now. He says if I bring him enough of you, he'll let the others go. I'm sorry." },
 }
+
+-- The old man by the stove in the ranger station (the lobby): he's the driver from the drive up.
+-- One line each time you talk to him, in this order, then round again from DriverLoopFrom.
+Story.Driver = {
+	"Evening. You'll be wanting a ride up to the cabin. Trucks are out back. Any one of them'll get you there.",
+	"Road's shut past the lake after dark. I take folks as far as the path. Never further.",
+	"See the signs by the trucks? That's how bad a night you're in for. The red one's not for first-timers.",
+	"That poster out by the door. Four of them went up the Hollow Pines road one October. Mara, Theo, Jun... and Cal.",
+	"Keep that candle moving, whatever else you do. He counts. He's always counting.",
+	"If you find a book up there, believe what's written in it. Not the door you want.",
+	"Me? I've driven this road a long time. Longer than I'd like.",
+	"Don't look at me like that. I always radio for help. Always.",
+	"If you get out, don't come back. And if you do come back... ride with somebody else.",
+}
+Story.DriverLoopFrom = 3
 
 -- Endings, keyed by the result's ending id.
 Story.Endings = {

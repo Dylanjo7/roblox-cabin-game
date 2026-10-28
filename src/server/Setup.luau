@@ -15,6 +15,7 @@ local ClueSigns = require(script.Parent.ClueSigns)
 local Clock = require(script.Parent.Clock)
 local Journal = require(script.Parent.Journal)
 local Deck = require(script.Parent.Deck)
+local Difficulty = require(script.Parent.Difficulty)
 local GameState = require(script.Parent.GameState)
 local Hands = require(script.Parent.Hands)
 local MapGrid = require(script.Parent.MapGrid)
@@ -49,7 +50,7 @@ end
 
 local function deal(players: { Player })
 	for _, player in players do
-		for _ = 1, Config.HandSize do
+		for _ = 1, Difficulty.get().handSize do
 			local card = dealOne()
 			if card then
 				Hands.add(player, card)
@@ -80,6 +81,12 @@ function Setup.run(players: { Player })
 		GameState.transition("TurnLoop")
 	end)
 	Remotes.notify(first, "Place the Crawlspace on one of the Parlor's doors.")
+	local level = Difficulty.get()
+	if Difficulty.id() ~= Config.Difficulty.Default then
+		for _, player in players do
+			Remotes.notify(player, `Tonight is {level.name}. {level.blurb}`)
+		end
+	end
 end
 
 return Setup

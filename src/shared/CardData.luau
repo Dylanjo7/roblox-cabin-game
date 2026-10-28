@@ -207,6 +207,20 @@ local CARDS: { CardDef } = {
 		inDeck = true,
 		text = "All doors slam shut. Find the key in your room to open your way back to the table.",
 	},
+	{
+		id = "dont_look",
+		name = "Don't Look Away",
+		type = "Event",
+		inDeck = true,
+		text = "Something pale climbs out of the mirrors. It only moves when nobody is looking at it, and the lights keep failing. Cover the marked mirrors to send it back.",
+	},
+	{
+		id = "hush",
+		name = "Hush",
+		type = "Event",
+		inDeck = true,
+		text = "A gramophone starts playing somewhere in the cabin. Move while the music plays; when it stops, freeze. Find it and lift the needle.",
+	},
 
 	-- Clues: played onto the Altar. If the top card is a true clue, its sign appears in the cabin.
 	{

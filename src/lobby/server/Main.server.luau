@@ -1,9 +1,12 @@
 --!strict
 -- Lobby place boot: builds the ranger station and runs the trucks (Config.Lobby.Trucks, each its
--- own lobby). Standing on a truck's pad puts you in its group (1 to Config.MaxPlayers). The truck leaves when it's full, or
--- Config.Lobby.DepartSeconds after the first person gets on: the server reserves a private
+-- own lobby). Standing on a truck's pad puts you in its group (1 to Config.MaxPlayers). Each
+-- truck has a difficulty (Config.Lobby.TruckDifficulty), shown on the sign by its pad; anyone on
+-- the truck (or anyone, while it's empty) can change it there. The truck leaves when it's full,
+-- or Config.Lobby.DepartSeconds after the first person gets on: the server reserves a private
 -- server of the cabin place and teleports the group there together, with the party's UserIds
--- as teleport data (the cabin waits for all of them; see src/server/Party.luau).
+-- and the difficulty as teleport data (the cabin waits for all of them; see
+-- src/server/Party.luau).
 
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
@@ -16,11 +19,13 @@ local Config = require(Shared:WaitForChild("Config"))
 local Places = require(Shared:WaitForChild("Places"))
 
 local LobbyShop = require(script.Parent.LobbyShop)
+local OldDriver = require(script.Parent.OldDriver)
 local Station = require(script.Parent.Station)
 
 type Queue = {
 	index: number,
 	truck: Station.Truck,
+	difficulty: string, -- a key of Config.Difficulty.Levels
 	members: { Player },
 	departAt: number?, -- os.clock() when it leaves; nil while empty
 	leaving: boolean, -- reserving / teleporting; nobody can get on or off
@@ -65,11 +70,24 @@ if leftover then
 end
 local built = Station.build()
 LobbyShop.init(built)
+OldDriver.init(built.driver)
+
+-- Each truck's difficulty to start with (and after every departure).
+local function truckDefault(index: number): string
+	local id = Config.Lobby.TruckDifficulty[index]
+	return if id and Config.Difficulty.Levels[id] then id else Config.Difficulty.Default
+end
 
 local queues: { Queue } = {}
 for i, truck in built.trucks do
-	table.insert(queues, { index = i, truck = truck, members = {}, departAt = nil, leaving = false })
+	table.insert(queues, { index = i, truck = truck, difficulty = truckDefault(i), members = {}, departAt = nil, leaving = false })
 end
+
+local SIGN_COLOURS: { [string]: Color3 } = {
+	normal = Color3.fromRGB(226, 214, 180),
+	hard = Color3.fromRGB(240, 160, 70),
+	nightmare = Color3.fromRGB(220, 50, 40),
+}
 
 local teleporting: { [Player]: boolean } = {}
 local retries: { [Player]: number } = {}
@@ -95,16 +113,23 @@ end
 local function setBoard(queue: Queue)
 	local n = #queue.members
 	local max = Config.MaxPlayers
+	local name = Config.Difficulty.Levels[queue.difficulty].name
 	local text
 	if queue.leaving then
-		text = `TRUCK {queue.index}\nHeading up to the cabin...`
+		text = `TRUCK {queue.index} · {name}\nHeading up to the cabin...`
 	elseif n == 0 then
-		text = `TRUCK {queue.index}\nStand on the pad to ride · 0/{max}`
+		text = `TRUCK {queue.index} · {name}\nStand on the pad to ride · 0/{max}`
 	else
 		local left = math.max(0, math.ceil((queue.departAt or os.clock()) - os.clock()))
-		text = `TRUCK {queue.index}\n{n}/{max} aboard · leaving in {left}s`
+		text = `TRUCK {queue.index} · {name}\n{n}/{max} aboard · leaving in {left}s`
 	end
 	queue.truck.label.Text = text
+end
+
+local function setSign(queue: Queue)
+	local level = Config.Difficulty.Levels[queue.difficulty]
+	queue.truck.sign.Text = `<b>{string.upper(level.name)}</b>\n<font size="18">{level.blurb}</font>`
+	queue.truck.sign.TextColor3 = SIGN_COLOURS[queue.difficulty] or SIGN_COLOURS.normal
 end
 
 local function reset(queue: Queue)
@@ -114,7 +139,34 @@ local function reset(queue: Queue)
 	queue.members = {}
 	queue.departAt = nil
 	queue.leaving = false
+	queue.difficulty = truckDefault(queue.index)
+	setSign(queue)
 	setBoard(queue)
+end
+
+-- The sign by the pad: the next difficulty along. Only someone on the truck can change it once
+-- anyone is aboard.
+for _, queue in queues do
+	setSign(queue)
+	queue.truck.signPrompt.Triggered:Connect(function(player: Player)
+		if queue.leaving then
+			return
+		end
+		if #queue.members > 0 and not table.find(queue.members, player) then
+			notify(player, "Only someone on this truck can change how hard the night is.")
+			return
+		end
+		local order = Config.Difficulty.Order
+		local at = table.find(order, queue.difficulty) or 0
+		queue.difficulty = order[at % #order + 1]
+		setSign(queue)
+		setBoard(queue)
+		local level = Config.Difficulty.Levels[queue.difficulty]
+		local told = if #queue.members > 0 then queue.members else { player }
+		for _, p in told do
+			notify(p, `Truck {queue.index} is now {level.name}. {level.blurb}`)
+		end
+	end)
 end
 
 local function depart(queue: Queue)
@@ -171,7 +223,7 @@ local function depart(queue: Queue)
 	end
 	local options = Instance.new("TeleportOptions")
 	options.ReservedServerAccessCode = codeOrErr :: string
-	options:SetTeleportData({ party = party })
+	options:SetTeleportData({ party = party, difficulty = queue.difficulty })
 	for _, player in present do
 		notify(player, "The truck pulls away down the dark road...")
 	end

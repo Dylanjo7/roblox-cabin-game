@@ -34,7 +34,8 @@ The truck died at the end of the path. The cabin's door is open. The game on the
 • Room cards build the cabin around you, one room at a time.
 • Progress cards move the Candle towards 3:00 AM. Keep it moving: the Hollow Man is following it.
 • Clue cards make signs appear in the house: a lullaby with no one playing it, wet footprints, a mirror that shows the room wrong. Find them, write them in the Journal, and work out which room is the one real way out.
-• Events drag everyone from the table: the power dies, the doors lock, something knocks, and sometimes he walks the halls himself.
+• Events drag everyone from the table: the power dies, the doors lock, something knocks, something pale moves only when you look away, a record plays and you must freeze when it stops, and sometimes he walks the halls himself.
+• Pick your night: Normal, Hard or Nightmare, on the truck you ride up in.
 • At 3:00 AM every way out unseals. Only one of them leads out. Choose.
 
 Read the notes they left. Don't trust the mirror. Don't answer the knocking.

@@ -17,6 +17,7 @@ local Types = require(Shared:WaitForChild("Types"))
 
 local Basement = require(script.Parent.Basement)
 local Clock = require(script.Parent.Clock)
+local Difficulty = require(script.Parent.Difficulty)
 local StateSync = require(script.Parent.StateSync)
 local Table = require(script.Parent.Table)
 
@@ -32,6 +33,8 @@ local EVENTS: { [string]: EventModule } = {
 	he_walks = require(script.Parent.Events.HeWalks),
 	final_escape = require(script.Parent.Events.FinalEscape),
 	attic = require(script.Parent.Events.Attic),
+	dont_look = require(script.Parent.Events.DontLook),
+	hush = require(script.Parent.Events.Hush),
 }
 
 local EventRunner = {}
@@ -165,7 +168,7 @@ end
 function EventRunner.start(id: string, players: { Player }, onFinished: () -> ())
 	local module = EVENTS[id]
 	assert(module, `Event {id} isn't built yet`)
-	local seconds = Config.EventSeconds[id]
+	local seconds = Difficulty.eventSeconds(id) + (module.leadSeconds or 0)
 
 	local run: EventRun
 	run = {
@@ -242,6 +245,8 @@ function EventRunner.init()
 			endsAt = run.endsAt,
 			over = run.over,
 			eliminated = out,
+			detail = run.data.detail,
+			alert = run.data.alert,
 		}
 	end)
 end

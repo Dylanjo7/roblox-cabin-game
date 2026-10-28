@@ -12,6 +12,7 @@ local Types = require(Shared:WaitForChild("Types"))
 
 local MapGrid = require(script.Parent.Parent.MapGrid)
 local Spots = require(script.Parent.Parent.Spots)
+local StateSync = require(script.Parent.Parent.StateSync)
 
 type Cell = MapGrid.Cell
 type EventRun = Types.EventRun
@@ -169,6 +170,14 @@ function EventKit.doorways(room: Model): { BasePart }
 		end
 	end
 	return out
+end
+
+-- A line of live status on the event banner, under the countdown ("1/3 mirrors covered");
+-- alert shows it big in red. Sent to everyone straight away.
+function EventKit.setDetail(run: EventRun, text: string?, alert: boolean?)
+	run.data.detail = text
+	run.data.alert = alert == true
+	StateSync.broadcast()
 end
 
 function EventKit.notifyAll(run: EventRun, text: string)

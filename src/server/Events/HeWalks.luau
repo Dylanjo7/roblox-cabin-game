@@ -16,6 +16,7 @@ local Remotes = require(Shared:WaitForChild("Remotes"))
 local RoomShapes = require(Shared:WaitForChild("RoomShapes"))
 local Types = require(Shared:WaitForChild("Types"))
 
+local Difficulty = require(script.Parent.Parent.Difficulty)
 local MapGrid = require(script.Parent.Parent.MapGrid)
 local EventKit = require(script.Parent.EventKit)
 local Hiding = require(script.Parent.Hiding)
@@ -116,9 +117,15 @@ function HeWalks.start(run: EventRun)
 	end
 
 	-- An invisible marker; each client draws and animates him on it (HollowManView).
+	-- (The final escape also sets run.data.startAt: just inside the front door.)
 	local position = centre(start)
 	local facing = Vector3.new(0, 0, -1)
-	local figure = HollowManModel.marker(CFrame.new(position), folder)
+	local entry = run.data.startAt
+	if typeof(entry) == "CFrame" then
+		position = entry.Position
+		facing = entry.LookVector
+	end
+	local figure = HollowManModel.marker(CFrame.lookAt(position, position + facing), folder)
 	EventKit.notifyAll(run, "He's inside the cabin. Stay out of his sight...")
 
 	local params = RaycastParams.new()
@@ -186,11 +193,11 @@ function HeWalks.start(run: EventRun)
 
 			-- Walk: straight at whoever he sees, otherwise room to room.
 			local goal: Vector3? = chase
-			local speed = cfg.ChaseSpeed
+			local speed = cfg.ChaseSpeed * Difficulty.get().huntSpeed
 			if chase then
 				route = {}
 			else
-				speed = cfg.WalkSpeed
+				speed = cfg.WalkSpeed * Difficulty.get().huntSpeed
 				if #route == 0 then
 					local here = cellAt(position) or start
 					route = nextLeg(run, here)

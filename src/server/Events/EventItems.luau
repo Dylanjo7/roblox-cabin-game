@@ -1,7 +1,7 @@
 --!strict
 -- The things events ask you to find and use, built from parts: an old brass skeleton key, a
--- glass cartridge fuse with a glowing filament, a fuse cabinet for the Parlor wall, and a
--- church candle on a brass dish. Things to be found float a little off the floor, turn slowly
+-- glass cartridge fuse with a glowing filament, a fuse cabinet for the Parlor wall, a church
+-- candle on a brass dish, a standing mirror to cover and a gramophone to stop. Things to be found float a little off the floor, turn slowly
 -- (tag "EventSpin", turned by each client) and glint, with a soft pool of light under them,
 -- so they can be spotted across a room.
 
@@ -216,6 +216,115 @@ function EventItems.candle(parent: Instance, base: Vector3, height: number): (Ba
 		fire.SecondaryColor = Color3.fromRGB(255, 90, 30)
 		fire.Parent = flame
 		glow(flame, Color3.fromRGB(255, 170, 60), 16, 1.4)
+	end
+end
+
+-- A tall standing mirror swung between two posts, its glass facing `facing` (flat), standing on
+-- the floor at `base`. Returns the frame (to prompt on) and a function that throws a sheet over it.
+function EventItems.mirror(parent: Instance, base: Vector3, facing: Vector3): (BasePart, () -> ())
+	local m = Instance.new("Model")
+	m.Name = "StandingMirror"
+	local at = CFrame.lookAt(base, base + facing) -- the glass faces -Z
+	local wood = Color3.fromRGB(74, 50, 32)
+	for _, x in { -1.35, 1.35 } do
+		part(m, "Foot", Vector3.new(0.3, 0.25, 1.7), at * CFrame.new(x, 0.125, 0), wood, Enum.Material.Wood)
+		part(m, "Post", Vector3.new(0.22, 5.6, 0.22), at * CFrame.new(x, 2.9, 0), wood, Enum.Material.Wood).CanCollide = true
+		rod(m, "Finial", 0.15, 0.32, at * CFrame.new(x, 5.86, 0) * CFrame.Angles(0, 0, math.rad(90)), BRASS, Enum.Material.Metal)
+		rod(m, "Pin", 0.08, 0.3, at * CFrame.new(x * 0.93, 3.1, 0), BRASS, Enum.Material.Metal)
+	end
+	-- The glass, tipped back a little in its frame, cracked across one corner.
+	local tilt = at * CFrame.new(0, 3.1, 0) * CFrame.Angles(math.rad(6), 0, 0)
+	local frame = part(m, "Frame", Vector3.new(2.3, 4.7, 0.2), tilt * CFrame.new(0, 0, 0.06), wood, Enum.Material.Wood)
+	frame.CanCollide = true
+	local glass = part(m, "Glass", Vector3.new(1.95, 4.3, 0.06), tilt * CFrame.new(0, 0, -0.07), Color3.fromRGB(150, 160, 166), Enum.Material.Glass)
+	glass.Reflectance = 0.55
+	for i, a in { 28, -40, 70 } do
+		part(m, "Crack", Vector3.new(0.9 - i * 0.15, 0.03, 0.02), tilt * CFrame.new(0.45, 1.3, -0.11) * CFrame.Angles(0, 0, math.rad(a)) * CFrame.new(0.3, 0, 0), Color3.fromRGB(230, 236, 240), Enum.Material.SmoothPlastic)
+	end
+	-- The sheet that covers it: hidden until then. It hangs over the top and pools on the floor.
+	local cloth = Color3.fromRGB(196, 190, 176)
+	local drape = part(m, "Sheet", Vector3.new(2.6, 5.0, 0.5), tilt * CFrame.new(0, -0.1, 0), cloth, Enum.Material.Fabric)
+	local fold = part(m, "SheetTop", Vector3.new(2.7, 0.5, 0.7), tilt * CFrame.new(0, 2.45, 0.02), cloth, Enum.Material.Fabric)
+	local pool = part(m, "SheetPool", Vector3.new(3.0, 0.15, 1.6), at * CFrame.new(0.2, 0.08, -0.5) * CFrame.Angles(0, math.rad(8), 0), cloth, Enum.Material.Fabric)
+	for _, p in { drape, fold, pool } do
+		p.Transparency = 1
+	end
+	m.Parent = parent
+	return frame, function()
+		for _, p in { drape, fold, pool } do
+			p.Transparency = 0
+		end
+		glass.Reflectance = 0
+	end
+end
+
+-- A wind-up gramophone on a little round table, facing `facing` (flat), standing on the floor at
+-- `base`: a wooden case, a record on the turntable (tag "EventTurn": each client turns it while
+-- its Playing attribute is true), a tone arm and a big brass horn. Returns the case (to prompt
+-- on), the horn's mouth (to play the music from) and a function that sets the needle down on
+-- the record (true) or lifts it (false).
+function EventItems.gramophone(parent: Instance, base: Vector3, facing: Vector3): (BasePart, BasePart, (boolean) -> ())
+	local m = Instance.new("Model")
+	m.Name = "Gramophone"
+	local at = CFrame.lookAt(base, base + facing)
+	local wood = Color3.fromRGB(92, 52, 30)
+	local dark = Color3.fromRGB(40, 26, 18)
+	-- The table.
+	rod(m, "TableTop", 1.45, 0.16, at * CFrame.new(0, 2.6, 0) * CFrame.Angles(0, 0, math.rad(90)), dark, Enum.Material.Wood).CanCollide = true
+	for i = 0, 2 do
+		local a = i * math.pi * 2 / 3
+		part(m, "Leg", Vector3.new(0.16, 2.55, 0.16), at * CFrame.new(math.cos(a) * 0.95, 1.28, math.sin(a) * 0.95) * CFrame.Angles(-math.sin(a) * 0.12, 0, math.cos(a) * 0.12), dark, Enum.Material.Wood)
+	end
+	-- The case and its crank.
+	local case = part(m, "Case", Vector3.new(1.9, 0.85, 1.9), at * CFrame.new(0, 3.1, 0), wood, Enum.Material.Wood)
+	case.CanCollide = true
+	part(m, "Trim", Vector3.new(1.96, 0.1, 1.96), at * CFrame.new(0, 3.5, 0), BRASS, Enum.Material.Metal)
+	rod(m, "CrankShaft", 0.05, 0.5, at * CFrame.new(1.15, 3.05, 0.2), BRASS, Enum.Material.Metal)
+	part(m, "CrankArm", Vector3.new(0.08, 0.5, 0.08), at * CFrame.new(1.4, 2.85, 0.2), BRASS, Enum.Material.Metal)
+	rod(m, "CrankKnob", 0.08, 0.22, at * CFrame.new(1.5, 2.62, 0.2), dark, Enum.Material.Wood)
+	-- The record: black, with a red label and a pale scratch so you can see it go round.
+	local record = Instance.new("Model")
+	record.Name = "Record"
+	local disc = rod(record, "Disc", 0.8, 0.05, at * CFrame.new(0, 3.58, 0) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(14, 14, 16), Enum.Material.SmoothPlastic)
+	disc.Reflectance = 0.12
+	rod(record, "Label", 0.27, 0.06, at * CFrame.new(0, 3.59, 0) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(150, 30, 26), Enum.Material.SmoothPlastic)
+	part(record, "Scratch", Vector3.new(0.5, 0.062, 0.03), at * CFrame.new(0.5, 3.585, 0.12) * CFrame.Angles(0, math.rad(20), 0), Color3.fromRGB(120, 120, 126), Enum.Material.SmoothPlastic)
+	record.PrimaryPart = disc
+	record:SetAttribute("Playing", false)
+	record.Parent = m
+	CollectionService:AddTag(record, "EventTurn")
+	-- The tone arm pivots at the back right corner; down, its needle rests on the record.
+	local pivot = at * CFrame.new(0.72, 3.8, 0.72)
+	rod(m, "ArmBase", 0.12, 0.28, at * CFrame.new(0.72, 3.68, 0.72) * CFrame.Angles(0, 0, math.rad(90)), BRASS, Enum.Material.Metal)
+	local arm = part(m, "ToneArm", Vector3.new(0.07, 0.07, 1.15), pivot, BRASS, Enum.Material.Metal)
+	local head = part(m, "Needle", Vector3.new(0.16, 0.12, 0.22), pivot, BRASS, Enum.Material.Metal)
+	local function setArm(down: boolean)
+		-- Swung in over the record and lowered, or swung out to its rest and lifted.
+		local swing = if down then math.rad(25) else math.rad(-10)
+		local lift = if down then math.rad(-7) else math.rad(10)
+		local frameAt = pivot * CFrame.Angles(0, swing, 0) * CFrame.Angles(lift, 0, 0) * CFrame.new(0, 0.05, -0.58)
+		arm.CFrame = frameAt
+		head.CFrame = frameAt * CFrame.new(0, -0.05, -0.6)
+	end
+	setArm(false)
+	-- The horn: a neck rising from the back, then rings flaring out, aimed up and forward.
+	rod(m, "HornNeck", 0.1, 1.1, at * CFrame.new(0, 3.95, 0.75) * CFrame.Angles(0, 0, math.rad(90)), BRASS, Enum.Material.Metal)
+	local aim = (at.LookVector + Vector3.new(0, 0.9, 0)).Unit
+	local start = (at * CFrame.new(0, 4.45, 0.7)).Position
+	local mouth: BasePart = case
+	for i = 0, 5 do
+		local radius = 0.12 + 0.07 * i ^ 1.8
+		local spot = start + aim * (i * 0.32)
+		local ring = rod(m, "Horn", radius, 0.34, CFrame.lookAt(spot, spot + aim) * CFrame.Angles(0, math.rad(90), 0), BRASS, Enum.Material.Metal)
+		ring.Reflectance = 0.25
+		mouth = ring
+	end
+	-- The dark of its throat, just inside the rim.
+	rod(m, "Throat", 0.12 + 0.07 * 5 ^ 1.8 - 0.06, 0.04, mouth.CFrame * CFrame.new(0.18, 0, 0), Color3.fromRGB(26, 20, 12), Enum.Material.SmoothPlastic)
+	m.Parent = parent
+	return case, mouth, function(down: boolean)
+		setArm(down)
+		record:SetAttribute("Playing", down)
 	end
 end
 

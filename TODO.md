@@ -156,6 +156,14 @@ RULES.md is the source of truth. MVP only for now.
   - Scares: more often; new ones: window slap + handprint, figure running past a doorway, him behind the empty chair, your name whispered, knocks in the walls
   - Cutscenes (`Cinema`, `Scenes`): intro in the Parlor, he enters, midnight, and an ending scene for each result; the server waits for mid-game ones
   - Store art in `art/` (AI thumbnail via vidIQ, icon, description in art/STORE_PAGE.md)
+- [x] N. More: two events, two cutscenes, difficulty, the old driver *(written, not yet run in Studio)*
+  - Don't Look Away (`Events/DontLook`, model `shared/PaleFigureModel`): a faceless pale figure that only moves while no one in play faces it with a clear line of sight; the lights fail for a blink every 8-13 s (each screen goes black, `client/EventFx`) and it moves anyway; it paths room to room through the archways to the nearest player; cover up to 3 standing mirrors to end it. Caught by it, the face scare is its blank face
+  - Hush (`Events/Hush`): a gramophone plays the lullaby, slowed, somewhere in the cabin; when it stops, anyone who moves more than 1.2 studs (or jumps) is caught; lift the needle to end it; the room is named after 25 s. The banner shows HUSH in red while it listens; colour drains and your heart pounds
+  - Event banner shows a live status line from the event (`EventPublic.detail` / `alert`, `EventKit.setDetail`)
+  - Cutscenes: last turn (`Scenes.lastTurn`: knocks, the front door opens on nothing, a look at the Candle, and he's inside the shut door) and three o'clock (`Scenes.three`: the clock strikes, an exit door's boards fall, the front door bursts open). The final escape holds off 10 s for it, then he hunts from just inside the front door
+  - Difficulty (`Config.Difficulty`, server `Difficulty`): Normal / Hard / Nightmare per truck, changed at the sign by each pad, sent with the party; changes his turns per move, the hand size, event timers, his speed in events and how often scares come; shown in the Journal and told at setup
+  - The old driver (`lobby/server/OldDriver`, `lobby/client/DriverView`): in a rocking chair by the station stove, head follows you, "Talk" for his lines (`Story.Driver`, voice keys driver_1..9)
+  - Bug: the face scare's screen was lost on a respawn, and every scare after it with it (ResetOnSpawn)
 - [ ] C2: clue signs in rooms (lullaby audio still to find)
 - [ ] C3: Journal (M)
 - Clue decisions: the 9 defaults agreed on 2026-10-28 (sign placement, sign shown only while active, second copy re-rolls the spot, Tally 3 rooms 1-5 marks, Doll always appears/fake frowns after 3rd true clue, shared Journal with "Record" prompt, manual cross-out, exits not in deck yet, faked mirror)

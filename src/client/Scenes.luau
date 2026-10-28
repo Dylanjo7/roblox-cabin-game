@@ -5,10 +5,16 @@
 --   enters: the first time he comes onto the clock. His piece steps onto nine on the table, then
 --     out through a window, he walks out of the trees towards the cabin.
 --   midnight: his piece reaches midnight, and he's at the window, much closer, watching.
+--   lastTurn: his piece catches the Candle. Three knocks; the front door creaks open on nothing;
+--     a look at the Candle, and back at the door he's standing inside it (Atmosphere keeps him
+--     there until the Candle gets away).
+--   three: 3:00 AM. The grandfather clock strikes three, the boards fall off an exit room's
+--     door, and the front door bursts open: he's in the cabin (the hunt starts as it ends).
 --   ending: escaped (dawn on the road by the truck), caught (the Candle goes out and he leans
 --     over the table), lost (the cabin's lights go out one by one), never built (the card box).
 -- Each returns false if it couldn't play, so the caller shows the plain text version instead.
--- The mid-game ones only play while the table is waiting on him (the Clock stage).
+-- The mid-game ones only play while the table is waiting on him (the Clock stage); three plays
+-- while the final escape holds off for it (Config.Cinematics.ThreeSeconds).
 
 local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
@@ -17,6 +23,7 @@ local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
+local RoomShapes = require(Shared:WaitForChild("RoomShapes"))
 local Story = require(Shared:WaitForChild("Story"))
 
 local Audio = require(script.Parent.Audio)
@@ -243,6 +250,189 @@ function Scenes.midnight(): boolean
 			end
 		end,
 		onEnd = function()
+			if figure then
+				figure.destroy()
+			end
+		end,
+	})
+end
+
+-- The front door model and where it hangs closed (its pivot is the hinge), to swing it open
+-- just for this client and put it back after.
+local function frontDoor(): (Model?, CFrame)
+	local door = workspace:FindFirstChild("FrontDoor")
+	if door and door:IsA("Model") then
+		return door, door:GetPivot()
+	end
+	return nil, CFrame.new()
+end
+
+-- Looking at the front door from beside the table.
+local function doorShot(push: number): (CFrame, CFrame)
+	local origin = Config.ParlorOrigin
+	local door = origin + Vector3.new(Config.FrontDoor.X, 4, Config.TileSize / 2)
+	return CFrame.lookAt(origin + Vector3.new(Config.FrontDoor.X + 6, 6, 4), door), CFrame.lookAt(origin + Vector3.new(Config.FrontDoor.X + 3, 5, 4 + push), door)
+end
+
+-- His piece has caught the Candle. Three knocks at the front door, and it creaks open on an
+-- empty doorway. A look at the Candle; back at the door, it's shut again, and he's inside it.
+-- (Where he stands is where Atmosphere keeps him for the rest of the last turn.)
+function Scenes.lastTurn(): boolean
+	local door, closed = frontDoor()
+	if not door then
+		return false
+	end
+	local length = Config.Cinematics.LastTurnSeconds
+	local candle = TablePieces.candleAt().Position
+	local centre = Config.ParlorOrigin + Vector3.new(0, Config.Table.TopHeight, 0)
+	local out = (candle - centre) * Vector3.new(1, 0, 1)
+	out = if out.Magnitude > 0.1 then out.Unit else Vector3.zAxis
+	local side = out:Cross(Vector3.yAxis)
+	local look = candle + Vector3.new(0, 0.5, 0)
+	local flame = candle + Vector3.new(0, 0.9, 0)
+	local a, b = doorShot(3)
+	local c, d = doorShot(5)
+	local figure: HollowManView.Handle? = nil
+	local knocks = 0
+	local opened = false
+	local whispered = false
+	local panel = door:FindFirstChild("Door")
+	local at = if panel and panel:IsA("BasePart") then panel else nil
+	return Cinema.play({
+		length = length,
+		fadeIn = 0.4,
+		camera = shots({
+			-- The two pieces side by side on the rim; the door; the Candle's flame; the door.
+			{ from = 0, to = 2.8, a = CFrame.lookAt(candle + out * 2.6 + side * 1.2 + Vector3.new(0, 1.4, 0), look), b = CFrame.lookAt(candle + out * 1.6 + side * 0.5 + Vector3.new(0, 0.8, 0), look) },
+			{ from = 2.8, to = 6, a = a, b = b },
+			{ from = 6, to = 7.2, a = CFrame.lookAt(flame + out * 1.3 + Vector3.new(0, 0.2, 0), flame), b = CFrame.lookAt(flame + out * 0.9 + Vector3.new(0, 0.1, 0), flame) },
+			{ from = 7.2, to = length, a = c, b = d },
+		}),
+		lines = { { at = 3.2, line = Story.Beats.caught, voice = "beat_caught" } },
+		onStart = function()
+			Audio.play("caught", 0.6)
+		end,
+		onFrame = function(t: number)
+			while knocks < 3 and t >= 3.1 + knocks * 0.55 do
+				knocks += 1
+				Audio.play("knock", 0.9, at)
+			end
+			if t >= 4.8 and t < 6 then
+				if not opened then
+					opened = true
+					Audio.play("creak", 0.8, at)
+				end
+				door:PivotTo(closed * CFrame.Angles(0, math.rad(80 * ease((t - 4.8) / 1.4)), 0))
+			elseif t >= 6 and not figure then
+				-- While you looked away: the door's shut, and he's in.
+				door:PivotTo(closed)
+				figure = HollowManView.spawnLocal(RoomShapes.frontDoorInside(), true, true)
+			end
+			if figure and t >= 7.2 and not whispered then
+				whispered = true
+				Audio.play("whisper", 0.7)
+			end
+		end,
+		onEnd = function()
+			door:PivotTo(closed)
+			if figure then
+				figure.destroy()
+			end
+		end,
+	})
+end
+
+-- 3:00 AM. The clock strikes three, an exit door's boards fall, and the front door bursts open:
+-- he's inside, where the hunt starts (RoomShapes.hollowEntry) when this ends.
+function Scenes.three(): boolean
+	local door, closed = frontDoor()
+	local length = Config.Cinematics.ThreeSeconds
+	local origin = Config.ParlorOrigin
+	local tableTop = origin + Vector3.new(0, Config.Table.TopHeight, 0)
+	local list: { Shot } = {}
+
+	-- The grandfather clock (or the table, if there isn't one).
+	local face = prop("Face")
+	if face and face:IsA("BasePart") then
+		local front = face.CFrame.LookVector
+		table.insert(list, { from = 0, to = 3.6, a = CFrame.lookAt(face.Position + front * 4.6 + Vector3.new(0, -0.6, 0), face.Position), b = CFrame.lookAt(face.Position + front * 2.2, face.Position) })
+	else
+		table.insert(list, { from = 0, to = 3.6, a = CFrame.lookAt(tableTop + Vector3.new(0, 9, 9), tableTop), b = CFrame.lookAt(tableTop + Vector3.new(0, 6, 6), tableTop) })
+	end
+
+	-- The exit door nearest the Parlor, from inside its room, as its boards come away.
+	local exitPanel: BasePart? = nil
+	local cabin = workspace:FindFirstChild("Cabin")
+	if cabin then
+		local best = math.huge
+		for _, inst in cabin:GetDescendants() do
+			if inst.Name == "ExitDoor" and inst:IsA("Model") then
+				local p = inst:FindFirstChild("Panel")
+				if p and p:IsA("BasePart") and (p.Position - origin).Magnitude < best then
+					exitPanel, best = p, (p.Position - origin).Magnitude
+				end
+			end
+		end
+	end
+	local doorFrom = 3.6
+	if exitPanel then
+		local x, z = RoomShapes.cellAt(exitPanel.Position)
+		local into = (RoomShapes.cellPosition(x, z) - exitPanel.Position) * Vector3.new(1, 0, 1)
+		into = if into.Magnitude > 0.1 then into.Unit else Vector3.zAxis
+		local target = exitPanel.Position
+		table.insert(list, { from = 3.6, to = 6.6, a = CFrame.lookAt(target + into * 11 + Vector3.new(0, 1.5, 0), target), b = CFrame.lookAt(target + into * 7 + Vector3.new(0, 0.5, 0), target) })
+		doorFrom = 6.6
+	end
+
+	-- The front door.
+	local a, b = doorShot(2)
+	table.insert(list, { from = doorFrom, to = length, a = a, b = b })
+
+	local figure: HollowManView.Handle? = nil
+	local booms = 0
+	local burst = false
+	local slammed = false
+	local panel = door and door:FindFirstChild("Door")
+	local at = if panel and panel:IsA("BasePart") then panel else nil
+	local burstAt = doorFrom + 0.5
+	return Cinema.play({
+		length = length,
+		fadeIn = 0.4,
+		camera = shots(list),
+		lines = { { at = 0.8, line = Story.Beats.three, voice = "beat_three" } },
+		onFrame = function(t: number)
+			-- The clock strikes three: deep, slow.
+			while booms < 3 and t >= 0.5 + booms * 1.0 do
+				booms += 1
+				Audio.play("step", 0.9, nil, 0.45)
+			end
+			if t < burstAt then
+				return
+			end
+			if not burst then
+				burst = true
+				Audio.play("caught", 0.8)
+				Audio.play("step", 1, at, 0.7)
+			end
+			-- Flung open on the dark; the lights stutter and he's in; it slams behind him.
+			if door then
+				local open = ease((t - burstAt) / 0.35)
+				local shut = ease((t - (burstAt + 1.0)) / 0.3)
+				door:PivotTo(closed * CFrame.Angles(0, math.rad(100 * open * (1 - shut)), 0))
+				if shut >= 1 and not slammed then
+					slammed = true
+					Audio.play("step", 0.8, at, 0.9)
+				end
+			end
+			if t >= burstAt + 0.8 and not figure then
+				Audio.play("flicker", 0.7)
+				figure = HollowManView.spawnLocal(RoomShapes.hollowEntry(), true, true)
+			end
+		end,
+		onEnd = function()
+			if door then
+				door:PivotTo(closed)
+			end
 			if figure then
 				figure.destroy()
 			end

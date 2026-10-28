@@ -28,7 +28,7 @@ local Config = {
 	},
 
 	HollowMan = {
-		TurnsPerMove = 4, -- he moves once every this many turns, whatever the player count (4 players = once a round; solo = every 4th turn)
+		-- (How many turns between his moves depends on the difficulty: Difficulty.Levels.)
 		EntryStep = 0, -- his first move puts him on the track at 9:00 PM
 		StepsPerRound = 1, -- then +30 min per move
 		StepsPerRoundFromMidnight = 2, -- +60 min per move once he is at or past midnight
@@ -36,7 +36,24 @@ local Config = {
 		MinStep = 0, -- Hold the Line can't push him below 9:00 PM
 	},
 
-	HandSize = 3, -- cards dealt to each player at setup
+	-- How hard the night is. Each truck in the lobby has one (Lobby.TruckDifficulty; whoever's on
+	-- the truck can change it at the sign by its pad) and it's sent to the cabin with the party.
+	-- A cabin server the lobby didn't send anyone to (Studio, or joining directly) uses Default.
+	--   turnsPerMove: he moves once every this many turns, whatever the player count (4 = once
+	--     a round with 4 players; solo, every 4th of your turns)
+	--   handSize: cards dealt to each player at setup
+	--   eventTime: event timers are multiplied by this (not the final escape)
+	--   huntSpeed: how fast he (and the pale thing) moves in events, times this
+	--   scareGap: the gap between jump scares, times this
+	Difficulty = {
+		Default = "normal",
+		Order = { "normal", "hard", "nightmare" },
+		Levels = {
+			normal = { name = "Normal", turnsPerMove = 4, handSize = 3, eventTime = 1, huntSpeed = 1, scareGap = 1, blurb = "He moves once a round." },
+			hard = { name = "Hard", turnsPerMove = 3, handSize = 3, eventTime = 0.85, huntSpeed = 1.12, scareGap = 0.75, blurb = "He moves more often. Events are shorter." },
+			nightmare = { name = "Nightmare", turnsPerMove = 3, handSize = 2, eventTime = 0.75, huntSpeed = 1.25, scareGap = 0.5, blurb = "Fewer cards, less time, and he's faster." },
+		} :: { [string]: { name: string, turnsPerMove: number, handSize: number, eventTime: number, huntSpeed: number, scareGap: number, blurb: string } },
+	},
 	NoValidSpotPenaltySteps = 1, -- +30 min when a selected room has nowhere valid to go
 	PeekCount = 3,
 
@@ -109,13 +126,15 @@ local Config = {
 		cold_draft = 1,
 		shaking_floor = 1,
 		swap = 1,
-		-- Events: 1 each per RULES.md.
+		-- Events: 1 each (RULES.md's six, plus Don't Look Away and Hush).
 		fuse_box = 1,
 		candlelight = 1,
 		rising_water = 1,
 		the_knock = 1,
 		lockdown = 1,
 		he_walks = 1,
+		dont_look = 1,
+		hush = 1,
 		-- Clues: 3 each (18; RULES.md had 2 each, playtest wanted more).
 		music_box = 3,
 		wet_footprints = 3,
@@ -136,6 +155,8 @@ local Config = {
 		lockdown = 60,
 		final_escape = 90,
 		attic = 60,
+		dont_look = 75,
+		hush = 70,
 	} :: { [string]: number },
 	-- Each player caught in an event lets the Hollow Man gain this many steps (30 min each) on the
 	-- Candle. The Candle itself never moves for events: only cards move it.
@@ -167,6 +188,38 @@ local Config = {
 			HuntChance = 0.65, -- at each room, chance he heads towards the nearest player instead of wandering
 			EyeHeight = 10,
 			StepSeconds = 0.65, -- footstep sound interval
+		},
+		-- Don't Look Away: the pale thing only moves while nobody in play is looking at it.
+		DontLook = {
+			Mirrors = 3, -- standing mirrors to cover (fewer if fewer rooms are built)
+			CoverSeconds = 1.2, -- hold to throw the sheet over one
+			Speed = 15, -- studs per second while nobody's looking
+			ViewDistance = 90,
+			ViewAngle = 45, -- degrees either side of where you face that count as looking at it
+			CatchDistance = 3.2,
+			GraceSeconds = 6, -- it doesn't move at all for this long after it appears
+			BlinkMinSeconds = 8, -- the lights fail for a blink this often...
+			BlinkMaxSeconds = 13,
+			BlinkSeconds = 0.5, -- ...for this long (each screen goes black)
+			BlinkLeadSeconds = 0.15, -- it moves this long after the dark starts
+			BlinkStep = 8, -- how far it gets in the dark
+			BlinkStopDistance = 4.5, -- a blink never leaves it closer than this to you
+		},
+		-- Hush: move while the gramophone plays, freeze when it stops.
+		Hush = {
+			FirstPlaySeconds = 9,
+			PlayMinSeconds = 5,
+			PlayMaxSeconds = 9,
+			QuietMinSeconds = 3.5,
+			QuietMaxSeconds = 5.5,
+			ReactSeconds = 0.8, -- after the music stops, moving doesn't count for this long
+			MoveTolerance = 1.2, -- studs you can drift in the silence (turning round is fine)
+			JumpTolerance = 1.5,
+			StopSeconds = 0.8, -- hold to lift the needle
+			HintSeconds = 25, -- then everyone's told which room the music is in
+			Volume = 1,
+			PlaybackSpeed = 0.82, -- slowed, like an old record
+			HearDistance = 150,
 		},
 	},
 	FinalEscapeSeconds = 90,
@@ -231,6 +284,7 @@ local Config = {
 	-- The ranger station lobby place.
 	Lobby = {
 		Trucks = 5, -- each truck is its own lobby: one group of 1 to MaxPlayers, sent to its own cabin server
+		TruckDifficulty = { "normal", "normal", "hard", "hard", "nightmare" }, -- each truck's to start with (Difficulty.Order)
 		DepartSeconds = 15, -- once someone climbs on, the truck leaves after this (or as soon as it's full)
 		TeleportRetries = 1, -- a failed teleport is tried again this many times per player
 		ClockTime = 19.6, -- dusk
@@ -302,6 +356,7 @@ local Config = {
 		beat_midnight = "",
 		beat_caught = "",
 		beat_pushedBack = "",
+		beat_three = "", -- 3:00 AM, as the final escape begins
 		-- Endings (Story.Endings)
 		ending_caught_1 = "",
 		ending_caught_2 = "",
@@ -312,12 +367,25 @@ local Config = {
 		ending_lost_2 = "",
 		ending_never_built_1 = "",
 		ending_never_built_2 = "",
+		-- The old driver in the ranger station (Story.Driver), heard from where he sits
+		driver_1 = "",
+		driver_2 = "",
+		driver_3 = "",
+		driver_4 = "",
+		driver_5 = "",
+		driver_6 = "",
+		driver_7 = "",
+		driver_8 = "",
+		driver_9 = "",
 	} :: { [string]: string },
 
-	-- Mid-game cutscenes: how long the table waits for them after his move (client/Scenes).
+	-- Mid-game cutscenes: how long the table (or the final escape) waits for them (client/Scenes).
 	Cinematics = {
 		EnterSeconds = 7.5, -- he comes onto the clock
 		MidnightSeconds = 6.5, -- he reaches midnight
+		LastTurnSeconds = 9, -- he catches the Candle: knocks at the front door
+		ThreeSeconds = 10, -- 3:00 AM: the final escape holds off this long for its cutscene
+		ThreeUnsealAt = 3.6, -- the exit doors' boards fall this far into it
 	},
 
 	-- Robux items. Make them on the Creator Dashboard (your experience > Monetization) and put

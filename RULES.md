@@ -107,13 +107,25 @@ The true exit has to be built before 3:00 AM to escape through it, so holding ex
 
 ## The Hollow Man
 
-The Hollow Man chases the group's Candle on the clock track, not the players themselves. He moves once every 4 turns, whatever the player count (once round the table with 4 players; every 4th turn solo): 30 minutes, or 60 minutes from midnight on. The next turn waits while his piece moves.
+The Hollow Man chases the group's Candle on the clock track, not the players themselves. On Normal he moves once every 4 turns, whatever the player count (once round the table with 4 players; every 4th turn solo): 30 minutes, or 60 minutes from midnight on. The next turn waits while his piece moves.
 
 - **Caught:** if his piece reaches or passes the Candle, the group gets one last turn. That turn plays normally, but the Candle has to move forward before it ends.
 - **Lost:** if the last turn ends without the Candle moving, the run is over for everyone.
 - **The trap:** on the last turn, drawing an unknown card is risky. An Event or a card that ends your turn early can cost the run, so taking a clue off the Altar and playing a Progress card already in your hand is the safer line.
 
 His piece shows on the track at all times, so the group always knows how close he is.
+
+## Difficulty
+
+Each truck in the lobby has a difficulty, shown on the sign by its boarding pad. Anyone on the truck (or anyone, while it's empty) can change it at the sign. The run is played at the truck's difficulty.
+
+| Difficulty | He moves every | Cards dealt | Event timers | He moves in events | Scares |
+| --- | --- | --- | --- | --- | --- |
+| Normal | 4 turns | 3 each | as listed | normal speed | normal |
+| Hard | 3 turns | 3 each | 85% | 12% faster | more often |
+| Nightmare | 3 turns | 2 each | 75% | 25% faster | twice as often |
+
+The final escape is always 90 seconds.
 
 ## Event cards and elimination
 
@@ -127,6 +139,8 @@ An Event card starts the moment it's drawn and pulls every player away from the 
 | He Walks | The Hollow Man enters the cabin in person and hunts. Stay out of his sight until he leaves. | 60 s |
 | Rising Water | Water floods out from the Crawlspace. Get to the room farthest from it on the map. | 50 s |
 | Lockdown | All doors slam shut. Find the key in your room to open your way back to the table. | 60 s |
+| Don't Look Away | Something pale climbs out of the mirrors. It only moves while nobody is looking at it, and every so often the lights fail for a blink and it moves anyway. It comes for the nearest player; if it reaches you, you're out. Cover the marked mirrors (up to 3) to send it back. If any mirror is still bare at the end, everyone still in play is out. | 75 s |
+| Hush | A gramophone starts playing somewhere in the cabin. Move while the music plays. When the needle lifts, freeze: anyone who moves (turning to look is fine) before it plays again is out. Find it and lift the needle for good. After 25 seconds everyone is told which room it's in. If it's still playing at the end, everyone still in play is out. | 70 s |
 
 **Elimination**
 
@@ -138,8 +152,8 @@ An Event card starts the moment it's drawn and pulls every player away from the 
 
 Reaching 3:00 AM isn't a loss. It starts the final escape, whether or not the group found all three clues.
 
-1. Every built exit room's outside door unseals. Only the true exit's door leads out; the rest are traps.
-2. The Hollow Man enters the Parlor and starts hunting.
+1. The clocks strike three (a 10-second cutscene; the 90 seconds start after it). Every built exit room's outside door unseals. Only the true exit's door leads out; the rest are traps.
+2. The Hollow Man bursts in through the front door and starts hunting.
 3. Each player has 90 seconds to reach the exit room they believe is right and go through its door.
 4. A player who picks a wrong door, or is caught, is out.
 
@@ -151,7 +165,7 @@ With fewer than three clues, players have to guess between the exits that still 
 
 ## Deck list
 
-The shuffled deck holds 62 cards (after the first playtest: fewer rooms, more clues). The Crawlspace is set aside for setup and isn't shuffled in.
+The shuffled deck holds 64 cards (after the first playtest: fewer rooms, more clues; then two more events). The Crawlspace is set aside for setup and isn't shuffled in.
 
 | Card | Type | Copies |
 | --- | --- | --- |
@@ -170,7 +184,7 @@ The shuffled deck holds 62 cards (after the first playtest: fewer rooms, more cl
 | Shaking Floor | Progress | 1 |
 | Swap | Progress | 1 |
 | Music Box, Wet Footprints, Wrong Reflection, Frost, Tally Marks, The Doll | Clue | 3 each, 18 total |
-| Fuse Box, The Knock, Candlelight, He Walks, Rising Water, Lockdown | Event | 1 each, 6 total |
+| Fuse Box, The Knock, Candlelight, He Walks, Rising Water, Lockdown, Don't Look Away, Hush | Event | 1 each, 8 total |
 
 If the deck runs out, players can only take clues off the Altar, and the Hollow Man moves an extra 60 minutes once.
 

@@ -2,8 +2,8 @@
 -- The clock track: the group's Candle and the Hollow Man, as step indexes (0 = 9:00 PM, 12 = 3:00 AM).
 -- Only cards move the Candle (Progress cards, and the penalty for a room with nowhere to go):
 -- never a turn, a round or an event. Players caught in an event let the Hollow Man gain on it.
--- The Hollow Man moves once every Config.HollowMan.TurnsPerMove turns (4: once round the table
--- with 4 players; solo, every 4th of your turns). His first move puts him on the track at
+-- The Hollow Man moves once every turnsPerMove turns (Config.Difficulty; on Normal 4: once round
+-- the table with 4 players; solo, every 4th of your turns). His first move puts him on the track at
 -- 9:00 PM; after that he moves +30 min, or +60 min once he is at or past midnight. If he
 -- reaches or passes the Candle the next turn is a last turn: it must move the Candle, or the
 -- run is lost.
@@ -13,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 
 local Deck = require(script.Parent.Deck)
+local Difficulty = require(script.Parent.Difficulty)
 local GameState = require(script.Parent.GameState)
 local StateSync = require(script.Parent.StateSync)
 local Table = require(script.Parent.Table)
@@ -28,8 +29,8 @@ local movedThisTurn = false
 local candleStepsThisTurn = 0 -- for timing the table animation
 local turnsSinceMove = 0
 local deckOutUsed = false
--- The cutscene clients play for his last scheduled move ("enters" / "midnight"); the id changes
--- each time there's a new one.
+-- The cutscene clients play at the end of a turn ("enters" / "midnight" for his scheduled move,
+-- "last_turn" when he catches the Candle); the id changes each time there's a new one.
 local sceneId = 0
 local sceneKind: string? = nil
 
@@ -141,12 +142,19 @@ function Clock.resolveTurnEnd(): (TurnEndStatus, number)
 	end
 	local hollowSteps, sceneSeconds = 0, 0
 	turnsSinceMove += 1
-	if turnsSinceMove >= Config.HollowMan.TurnsPerMove then
+	if turnsSinceMove >= Difficulty.get().turnsPerMove then
 		turnsSinceMove = 0
 		hollowSteps, sceneSeconds = moveOnSchedule()
 	end
+	local wasLastTurn = lastTurn
 	local caughtAt = hollow
 	lastTurn = caughtAt ~= nil and caughtAt >= candle
+	if lastTurn and not wasLastTurn then
+		-- He's caught the Candle: him at the front door (instead of any other scene this turn).
+		sceneId += 1
+		sceneKind = "last_turn"
+		sceneSeconds = Config.Cinematics.LastTurnSeconds
+	end
 	update()
 	return if lastTurn then "LastTurn" else "Continue", animationSeconds(hollowSteps) + sceneSeconds
 end

@@ -266,7 +266,8 @@ end
 
 -- When he has caught the Candle, he stands just inside the front door, watching the table.
 local function updateDoorFigure()
-	local want = level == 5 and phase == "TurnLoop"
+	-- (Not during a cutscene: the last-turn one brings him in itself.)
+	local want = level == 5 and phase == "TurnLoop" and not Cinema.isPlaying()
 	if not want then
 		if doorFigure then
 			doorFigure.destroy()
@@ -297,13 +298,23 @@ local function onClockChange(state: Types.PublicState)
 	local sceneId = clock.sceneId or 0
 	local scene = if sceneId ~= lastSceneId and lastSceneId ~= nil then clock.scene else nil
 	lastSceneId = sceneId
+	local beatFor = if scene == "last_turn" then "caught" else scene
 	if scene and not BoardUI.isViewing() and not Cinema.isPlaying() then
 		task.spawn(function()
-			local played = if scene == "enters" then Scenes.enters() else Scenes.midnight()
-			if not played then
-				Cutscene.beat(if scene == "enters" then Story.Beats.enters else Story.Beats.midnight, `beat_{scene}`)
+			local played
+			if scene == "enters" then
+				played = Scenes.enters()
+			elseif scene == "midnight" then
+				played = Scenes.midnight()
+			else
+				played = Scenes.lastTurn()
+			end
+			if not played and beatFor then
+				Cutscene.beat(Story.Beats[beatFor], `beat_{beatFor}`)
 			end
 		end)
+	elseif scene == "last_turn" then
+		Cutscene.beat(Story.Beats.caught, "beat_caught")
 	elseif hollow ~= nil and lastHollow == nil then
 		Cutscene.beat(Story.Beats.enters, "beat_enters")
 	elseif hollow ~= nil and lastHollow ~= nil and hollow > lastHollow then
@@ -315,7 +326,7 @@ local function onClockChange(state: Types.PublicState)
 	elseif hollow ~= nil and lastHollow ~= nil and hollow < lastHollow then
 		Cutscene.beat(Story.Beats.pushedBack, "beat_pushedBack")
 	end
-	if clock.lastTurn and not lastLastTurn then
+	if clock.lastTurn and not lastLastTurn and scene ~= "last_turn" then
 		Audio.play("caught", 0.7)
 		task.delay(1.5, Cutscene.beat, Story.Beats.caught, "beat_caught")
 	end
@@ -339,7 +350,17 @@ local function onEventChange(state: Types.PublicState)
 		Audio.loopVolume("flood", 0.5, 4)
 	elseif id == "he_walks" then
 		Audio.play("caught", 0.6) -- the drone and heartbeat come only when he's near you
-	end -- The Knock and Lockdown play their sounds from the world (server side).
+	elseif id == "dont_look" then
+		Audio.play("flicker", 0.6)
+		task.delay(0.6, Audio.play, "whisper", 0.4)
+	elseif id == "final_escape" then
+		-- Three o'clock (the hunt holds off while it plays).
+		task.spawn(function()
+			if BoardUI.isViewing() or not Scenes.three() then
+				Cutscene.beat(Story.Beats.three, "beat_three")
+			end
+		end)
+	end -- The Knock, Lockdown and Hush play their sounds from the world (server side).
 	lastEventId = id
 end
 
@@ -391,6 +412,7 @@ function Atmosphere.init()
 		presenceClock += dt
 		if presenceClock > 0.2 then
 			presenceClock = 0
+			updateDoorFigure()
 			local now = presenceLevel()
 			if now ~= presence then
 				presence = now

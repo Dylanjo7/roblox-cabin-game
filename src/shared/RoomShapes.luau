@@ -69,6 +69,12 @@ function RoomShapes.frontDoorInside(): CFrame
 	return CFrame.lookAt(spot, Vector3.new(origin.X, spot.Y, origin.Z))
 end
 
+-- Where he stands when he comes in by the front door at 3:00 AM: a little further in than
+-- frontDoorInside, clear of the door's swing.
+function RoomShapes.hollowEntry(): CFrame
+	return RoomShapes.frontDoorInside() * CFrame.new(0, 0, -3.5)
+end
+
 -- The map cell a world position falls in.
 function RoomShapes.cellAt(position: Vector3): (number, number)
 	local offset = position - Config.ParlorOrigin

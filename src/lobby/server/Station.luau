@@ -2,15 +2,18 @@
 -- Builds the ranger station lobby: a log station on a stone foundation with a covered porch,
 -- a firepit and woodpile, a flagpole, a gravel lot with a bay for each truck (lamp posts, painted
 -- lines), a road out through a gate into the pines, and the old pickups that take groups up to
--- the cabin, each with a boarding pad behind it and a board above it. Inside: the front desk
--- (where the supplies are), a wood stove, a bench, shelves, a coat rack, the trail map with how
--- to play, and a shelf of candles for those who didn't come back. All built from parts.
+-- the cabin, each with a boarding pad behind it, a board above it and a difficulty sign beside
+-- it. Inside: the front desk (where the supplies are), a wood stove with the old driver rocking
+-- beside it (OldDriver), a bench, shelves, a coat rack, the trail map with how to play, and a
+-- shelf of candles for those who didn't come back. All built from parts.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local TruckModel = require(Shared:WaitForChild("TruckModel"))
+
+local OldDriver = require(script.Parent.OldDriver)
 
 local PLANK = Color3.fromRGB(92, 66, 44)
 local LOG = Color3.fromRGB(104, 74, 48)
@@ -49,12 +52,16 @@ export type Truck = {
 	model: Model,
 	pad: BasePart, -- stand on this to ride
 	label: TextLabel, -- the board above the truck
+	sign: TextLabel, -- the painted sign by the pad: how hard the night will be
+	signBoard: BasePart,
+	signPrompt: ProximityPrompt, -- change it
 }
 
 export type Built = {
 	trucks: { Truck },
 	counter: BasePart, -- the front desk, where the supplies are
 	candles: { BasePart }, -- the memorial shelf's candles, unlit
+	driver: Model, -- the old driver by the stove (OldDriver)
 }
 
 local function part(parent: Instance, name: string, size: Vector3, cf: CFrame, color: Color3, material: Enum.Material?): Part
@@ -97,7 +104,7 @@ local function light(parent: BasePart, color: Color3, range: number, brightness:
 end
 
 -- Text on one face of a part.
-local function writeOn(p: BasePart, face: Enum.NormalId, text: string, textColor: Color3, size: number?, font: Enum.Font?)
+local function writeOn(p: BasePart, face: Enum.NormalId, text: string, textColor: Color3, size: number?, font: Enum.Font?): TextLabel
 	local gui = Instance.new("SurfaceGui")
 	gui.Face = face
 	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
@@ -114,6 +121,7 @@ local function writeOn(p: BasePart, face: Enum.NormalId, text: string, textColor
 	label.TextWrapped = true
 	label.Text = text
 	label.Parent = gui
+	return label
 end
 
 -- Round logs stacked up the outside face of a stretch of wall, from a to b (on the ground),
@@ -499,8 +507,25 @@ local function buildTruck(parent: Instance, index: number, at: CFrame): Truck
 	edge.Transparency = 0.5
 	edge.Parent = label
 
+	-- The difficulty sign: a painted board on a post at the side of the pad, facing the station.
+	part(model, "SignPost", Vector3.new(0.35, 4.6, 0.35), at * CFrame.new(6.6, 2.3, -15.2), LOG_DARK)
+	local signBoard = part(model, "DifficultySign", Vector3.new(3.8, 1.9, 0.22), at * CFrame.new(6.6, 4.3, -15.42), DARK, Enum.Material.WoodPlanks)
+	trim(model, "SignEdge", Vector3.new(4.0, 2.1, 0.12), at * CFrame.new(6.6, 4.3, -15.3), LOG, Enum.Material.Wood)
+	local sign = writeOn(signBoard, Enum.NormalId.Front, "", CREAM, 26, Enum.Font.Fondamento)
+	;(sign.Parent :: SurfaceGui).PixelsPerStud = 64
+	sign.Size = UDim2.new(1, -16, 1, -12)
+	sign.Position = UDim2.fromOffset(8, 6)
+	sign.RichText = true
+	local signPrompt = Instance.new("ProximityPrompt")
+	signPrompt.ActionText = "Change"
+	signPrompt.ObjectText = "How hard tonight is"
+	signPrompt.HoldDuration = 0
+	signPrompt.MaxActivationDistance = 10
+	signPrompt.RequiresLineOfSight = false
+	signPrompt.Parent = signBoard
+
 	model.Parent = parent
-	return { model = model, pad = pad, label = label }
+	return { model = model, pad = pad, label = label, sign = sign, signBoard = signBoard, signPrompt = signPrompt }
 end
 
 -- Build everything.
@@ -512,6 +537,8 @@ function Station.build(): Built
 	buildShell(root)
 	buildPorch(root)
 	local counter, candles = buildInside(root)
+	-- The old driver in his rocking chair by the stove, turned to the room and the door.
+	local driver = OldDriver.build(root, CFrame.lookAt(Vector3.new(-15, 0, -8), Vector3.new(0, 0, 6)))
 	buildYard(root)
 	local count = Config.Lobby.Trucks
 	buildLot(root, count)
@@ -550,7 +577,7 @@ function Station.build(): Built
 	end
 
 	root.Parent = workspace
-	return { trucks = trucks, counter = counter, candles = candles }
+	return { trucks = trucks, counter = counter, candles = candles, driver = driver }
 end
 
 return Station

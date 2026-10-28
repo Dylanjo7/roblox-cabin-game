@@ -2,16 +2,21 @@
 -- The final escape at 3:00 AM (run through EventRunner like an event, but not a card in the deck).
 -- Every built exit room's outside door unseals: its boards and chain fall away and it can be
 -- opened. Only the true exit's door leads out; the rest are traps (whoever opens one is out).
--- The Hollow Man comes into the Parlor and hunts, as in He Walks. Whoever gets through the true
--- exit is safe outside by the truck; anyone still inside when time runs out is caught. It ends
--- early once nobody is left in play. Eliminations here don't move the Candle (the clock is done).
+-- The Hollow Man comes in by the front door and hunts, as in He Walks. Whoever gets through the
+-- true exit is safe outside by the truck; anyone still inside when time runs out is caught. It
+-- ends early once nobody is left in play. Eliminations here don't move the Candle (the clock is
+-- done). It opens with a cutscene (client/Scenes.three: the clocks strike three, an exit door's
+-- boards fall, he bursts in), so the doors unseal partway through it and the hunt and the door
+-- prompts only start once it's over; the timer is that much longer (leadSeconds).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local CardData = require(Shared:WaitForChild("CardData"))
+local Config = require(Shared:WaitForChild("Config"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
+local RoomShapes = require(Shared:WaitForChild("RoomShapes"))
 local Types = require(Shared:WaitForChild("Types"))
 
 local MapGrid = require(script.Parent.Parent.MapGrid)
@@ -24,6 +29,7 @@ type EventRun = Types.EventRun
 local FinalEscape = {
 	noPenalty = true,
 	keepPlayers = true,
+	leadSeconds = Config.Cinematics.ThreeSeconds,
 }
 
 local escapedNames: { string } = {}
@@ -82,51 +88,73 @@ function FinalEscape.start(run: EventRun)
 	local trueExit = Secrets.trueExit()
 	local prompts: { ProximityPrompt } = {}
 	run.data.prompts = prompts
-
-	-- Unseal every built exit room's outside door.
 	local count = 0
-	for _, cell in MapGrid.all() do
-		local door = cell.model and cell.model:FindFirstChild("ExitDoor")
-		local panel = door and door:FindFirstChild("Panel")
-		if door and panel and panel:IsA("BasePart") then
-			count += 1
-			local boards = door:FindFirstChild("Boards")
-			if boards then
-				for _, board in boards:GetChildren() do
-					if board:IsA("BasePart") then
-						board.Anchored = false
-						board.CanCollide = false
+	local unsealed = false
+
+	-- Unseal every built exit room's outside door (its prompt waits for the cutscene to end).
+	local function unseal()
+		if unsealed then
+			return
+		end
+		unsealed = true
+		for _, cell in MapGrid.all() do
+			local door = cell.model and cell.model:FindFirstChild("ExitDoor")
+			local panel = door and door:FindFirstChild("Panel")
+			if door and panel and panel:IsA("BasePart") then
+				count += 1
+				local boards = door:FindFirstChild("Boards")
+				if boards then
+					for _, board in boards:GetChildren() do
+						if board:IsA("BasePart") then
+							board.Anchored = false
+							board.CanCollide = false
+						end
 					end
+					task.delay(2, function()
+						boards:Destroy()
+					end)
 				end
-				task.delay(2, function()
-					boards:Destroy()
+				EventKit.sound("creak", panel, 0.8)
+				local prompt = EventKit.prompt(panel, "Go through", `{CardData.get(cell.id).name} door`)
+				prompt.Enabled = false
+				prompt.Triggered:Connect(function(player: Player)
+					if not run.isActive(player) then
+						return
+					end
+					if trueExit and cell.id == trueExit.id then
+						escape(run, player, cell)
+					else
+						trap(run, player, cell)
+					end
 				end)
+				table.insert(prompts, prompt)
 			end
-			EventKit.sound("creak", panel, 0.8)
-			local prompt = EventKit.prompt(panel, "Go through", `{CardData.get(cell.id).name} door`)
-			prompt.Triggered:Connect(function(player: Player)
-				if not run.isActive(player) then
-					return
-				end
-				if trueExit and cell.id == trueExit.id then
-					escape(run, player, cell)
-				else
-					trap(run, player, cell)
-				end
-			end)
-			table.insert(prompts, prompt)
 		end
 	end
 
-	if count == 0 then
-		EventKit.notifyAll(run, "3:00 AM. Somewhere a lock turns... but no exit room was ever built.")
-	else
-		EventKit.notifyAll(run, `3:00 AM. {count} outside door{if count == 1 then "" else "s"} unsealed. Only one leads out. Choose.`)
-	end
-
-	-- He comes for you, starting in the Parlor.
-	run.data.startCell = MapGrid.get(0, 0)
-	HeWalks.start(run)
+	task.delay(Config.Cinematics.ThreeUnsealAt, function()
+		if not run.over then
+			unseal()
+		end
+	end)
+	task.delay(FinalEscape.leadSeconds, function()
+		if run.over then
+			return
+		end
+		unseal()
+		for _, prompt in prompts do
+			prompt.Enabled = true
+		end
+		if count == 0 then
+			EventKit.notifyAll(run, "3:00 AM. Somewhere a lock turns... but no exit room was ever built.")
+		else
+			EventKit.notifyAll(run, `3:00 AM. {count} outside door{if count == 1 then "" else "s"} unsealed. Only one leads out. Choose.`)
+		end
+		-- He's in by the front door, and he comes for you.
+		run.data.startCell = MapGrid.get(0, 0)
+		run.data.startAt = RoomShapes.hollowEntry()
+		HeWalks.start(run)
+	end)
 end
 
 function FinalEscape.onTimeout(run: EventRun): { Player }

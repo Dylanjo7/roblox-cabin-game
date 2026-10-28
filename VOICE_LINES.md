@@ -60,6 +60,7 @@ appears as text. If a recording runs long, the game waits for it before the next
 | beat_midnight | Narrator | Midnight. His steps grow longer. | ~3 s |
 | beat_caught | Narrator | He's at the door. Move the Candle, or it goes out. | ~3.5 s |
 | beat_pushedBack | Narrator | For a moment, the footsteps retreat. | ~3 s |
+| beat_three | Narrator | Three o'clock. Every lock in the cabin turns at once. So does the front door. | ~4.5 s |
 
 ### Endings
 
@@ -74,5 +75,21 @@ appears as text. If a recording runs long, the game waits for it before the next
 | ending_lost_2 | Narrator | By morning the cabin is quiet, and the table is set for new players. | ~4 s |
 | ending_never_built_1 | Narrator | Every door you opened led back inside. | ~3 s |
 | ending_never_built_2 | Narrator | The way out was never built. It's still in the deck, waiting. | ~4 s |
+
+### The old driver at the ranger station (the lobby)
+
+Same voice as the drive up: he's the driver. One line each time someone talks to him.
+
+| Key | Who | Line | Aim for |
+| --- | --- | --- | --- |
+| driver_1 | Driver | Evening. You'll be wanting a ride up to the cabin. Trucks are out back. Any one of them'll get you there. | ~5 s |
+| driver_2 | Driver | Road's shut past the lake after dark. I take folks as far as the path. Never further. | ~4.5 s |
+| driver_3 | Driver | See the signs by the trucks? That's how bad a night you're in for. The red one's not for first-timers. | ~5 s |
+| driver_4 | Driver | That poster out by the door. Four of them went up the Hollow Pines road one October. Mara, Theo, Jun... and Cal. | ~6 s |
+| driver_5 | Driver | Keep that candle moving, whatever else you do. He counts. He's always counting. | ~4.5 s |
+| driver_6 | Driver | If you find a book up there, believe what's written in it. Not the door you want. | ~4 s |
+| driver_7 | Driver | Me? I've driven this road a long time. Longer than I'd like. | ~3.5 s |
+| driver_8 | Driver | Don't look at me like that. I always radio for help. Always. | ~3.5 s |
+| driver_9 | Driver | If you get out, don't come back. And if you do come back... ride with somebody else. | ~4.5 s |
 
 Changing a line? Edit its text in `src/shared/Story.luau` too, so the subtitle matches what's said.

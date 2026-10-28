@@ -1,9 +1,10 @@
 --!strict
 -- The group a truck brought from the lobby place. The lobby reserves a private server of this
--- place and teleports its party here with { party = { userIds } } as teleport data, so the run
--- waits for the whole party (not just whoever has loaded so far) and sends everyone back to the
--- lobby when it's over. On a normal server (Studio, or someone joining directly) there is no
--- party and the cabin's own seat-to-start lobby is used as is.
+-- place and teleports its party here with { party = { userIds }, difficulty = id } as teleport
+-- data, so the run waits for the whole party (not just whoever has loaded so far), is played at
+-- the truck's difficulty, and sends everyone back to the lobby when it's over. On a normal
+-- server (Studio, or someone joining directly) there is no party and the cabin's own
+-- seat-to-start lobby is used as is.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -19,6 +20,7 @@ local Party = {}
 
 local expected: { [number]: boolean } = {}
 local expectedCount = 0
+local difficulty: string? = nil
 
 -- This server was reserved by the lobby (not a public or Studio server).
 function Party.isReserved(): boolean
@@ -31,11 +33,23 @@ function Party.expectedCount(): number
 	return math.min(expectedCount, Config.MaxPlayers)
 end
 
+-- The difficulty the truck was set to (the first one anyone arrives with), if there was a truck.
+-- Like the count, it's only the party's own night it changes.
+function Party.difficulty(): string?
+	return difficulty
+end
+
 local function readJoinData(player: Player)
 	local ok, data = pcall(function()
 		return player:GetJoinData().TeleportData
 	end)
-	if not ok or typeof(data) ~= "table" or typeof(data.party) ~= "table" then
+	if not ok or typeof(data) ~= "table" then
+		return
+	end
+	if difficulty == nil and typeof(data.difficulty) == "string" and Config.Difficulty.Levels[data.difficulty] then
+		difficulty = data.difficulty
+	end
+	if typeof(data.party) ~= "table" then
 		return
 	end
 	for _, userId in data.party do

@@ -5,7 +5,8 @@
 --   Behind you: spin round quickly and he's standing right there, gone a blink later.
 --   The corner: walk into a room and he's standing in the far corner, facing the wall. Look at
 --     him and his head snaps round to you, then he's gone.
---   The face: when you're caught in an event, his face fills the screen.
+--   The face: when you're caught in an event, his face fills the screen (or, caught by the pale
+--     thing in Don't Look Away, its blank one).
 --   The book: late in the night, opening the Journal, something has written in it.
 --   The window: a heavy slap on a window you're near, and his handprint left on the glass.
 --   The doorway: something tall runs past an open doorway you're looking down.
@@ -24,6 +25,7 @@ local TweenService = game:GetService("TweenService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local CardData = require(Shared:WaitForChild("CardData"))
 local Config = require(Shared:WaitForChild("Config"))
+local PaleFigureModel = require(Shared:WaitForChild("PaleFigureModel"))
 local RoomShapes = require(Shared:WaitForChild("RoomShapes"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
 local Types = require(Shared:WaitForChild("Types"))
@@ -44,6 +46,7 @@ local phase: Types.Phase = "Lobby"
 local hollow: number? = nil
 local cabin: { [string]: string } = {} -- "x,z" -> room id
 local lastScare = -math.huge
+local gapScale = 1 -- the difficulty's scareGap
 local wasOut = false
 local busy = false
 local faceGui: ScreenGui
@@ -69,7 +72,7 @@ local function ready(): boolean
 		and (phase == "TurnLoop" or phase == "Event")
 		and hollow ~= nil
 		and not seated()
-		and os.clock() - lastScare > cfg.MinGapSeconds
+		and os.clock() - lastScare > cfg.MinGapSeconds * gapScale
 		and root() ~= nil
 end
 
@@ -381,7 +384,7 @@ local function corner(x: number, z: number)
 end
 
 -- The face: his face fills the screen for a moment.
-local function face()
+local function face(eventId: string?)
 	if busy then
 		return
 	end
@@ -389,9 +392,16 @@ local function face()
 	lastScare = os.clock()
 	local viewport = faceGui:FindFirstChildOfClass("ViewportFrame") :: ViewportFrame
 	viewport:ClearAllChildren()
-	local rig = HollowManRig.new() -- built standing at the origin, as he is
-	rig.model.Parent = viewport
-	local headPart = rig.model:FindFirstChild("Head") :: BasePart
+	-- Whatever caught you: him, or the pale thing from the mirrors (its blank face, arms out).
+	local model: Model
+	if eventId == "dont_look" then
+		model = PaleFigureModel.build(CFrame.new(), nil)
+		PaleFigureModel.pose(model, CFrame.new(), PaleFigureModel.Poses[3])
+	else
+		model = HollowManRig.new().model -- built standing at the origin, as he is
+	end
+	model.Parent = viewport
+	local headPart = model:FindFirstChild("Head") :: BasePart
 	local headAt = headPart.Position
 	local camera = Instance.new("Camera")
 	camera.FieldOfView = 55
@@ -438,6 +448,7 @@ end
 function Scares.setState(state: Types.PublicState)
 	phase = state.phase
 	hollow = state.clock and state.clock.hollow
+	gapScale = if state.difficulty then state.difficulty.scareGap else 1
 	if state.cabin then
 		local map = {}
 		for _, cell in state.cabin do
@@ -449,7 +460,7 @@ function Scares.setState(state: Types.PublicState)
 	local event = state.event
 	local out = event ~= nil and table.find(event.eliminated, localPlayer.UserId) ~= nil
 	if out and not wasOut then
-		task.spawn(face)
+		task.spawn(face, if event then event.id else nil)
 	end
 	wasOut = out
 end
@@ -460,6 +471,7 @@ function Scares.init(gui: ScreenGui)
 	faceGui.Name = "Scare"
 	faceGui.IgnoreGuiInset = true
 	faceGui.DisplayOrder = 50
+	faceGui.ResetOnSpawn = false -- (it was lost on a respawn, and with it every scare after)
 	faceGui.Enabled = false
 	local viewport = Instance.new("ViewportFrame")
 	viewport.Size = UDim2.fromScale(1, 1)

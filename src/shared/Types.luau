@@ -45,7 +45,7 @@ export type ClockPublic = {
 	hollow: number?, -- nil while the Hollow Man is off the track
 	lastTurn: boolean, -- he has reached the Candle: the Candle must move this turn
 	sceneId: number?, -- changes when one of his moves comes with a cutscene
-	scene: string?, -- that cutscene: "enters" or "midnight"
+	scene: string?, -- that cutscene: "enters", "midnight" or "last_turn"
 }
 
 export type EventPublic = {
@@ -55,6 +55,8 @@ export type EventPublic = {
 	endsAt: number, -- workspace:GetServerTimeNow() when time runs out
 	over: boolean,
 	eliminated: { number }, -- UserIds sent to the Crawlspace this event
+	detail: string?, -- live status from the event ("1/3 mirrors covered", "HUSH. DON'T MOVE.")
+	alert: boolean?, -- show the detail as a warning
 }
 
 -- Server-side state of one running event, handed to the event's module.
@@ -79,6 +81,7 @@ export type EventModule = {
 	cleanup: (run: EventRun) -> (),
 	noPenalty: boolean?, -- eliminations don't move the Candle
 	keepPlayers: boolean?, -- nobody is put back in their seat afterwards
+	leadSeconds: number?, -- a cutscene plays first: the timer gets this much longer
 }
 
 -- One clue sign written into the shared Journal.
@@ -94,6 +97,13 @@ export type JournalPublic = {
 	entries: { JournalEntry },
 	crossed: { string }, -- exit ids the group has crossed out
 	marks: { [string]: string }?, -- clue result id -> "found" | "ruled_out"
+}
+
+export type DifficultyPublic = {
+	id: string,
+	name: string,
+	turnsPerMove: number,
+	scareGap: number,
 }
 
 export type ResultPublic = {
@@ -114,6 +124,7 @@ export type PublicState = {
 	arrival: { doorClosed: boolean }?, -- the front door has slammed behind the players
 	journal: JournalPublic?,
 	notes: { number }?, -- Story.Notes indexes found so far this run, in the order they were read
+	difficulty: DifficultyPublic?,
 }
 
 return {}
