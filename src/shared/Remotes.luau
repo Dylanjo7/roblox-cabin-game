@@ -22,6 +22,7 @@ local EVENTS = {
 	"SetLanternColour", -- client -> server: pick a lantern flame (Lantern Colours pass, or the free one)
 	"RequestScare", -- client -> server: buy a scare for this UserId (prompts the purchase)
 	"Scare", -- server -> one player: a bought scare ("face", from whom)
+	"ShowNote", -- server -> one player: the note they just picked up (its index in Story.Notes)
 }
 
 local FUNCTIONS = {

@@ -18,6 +18,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local ClueData = require(Shared:WaitForChild("ClueData"))
 local Config = require(Shared:WaitForChild("Config"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
+local Story = require(Shared:WaitForChild("Story"))
 local Types = require(Shared:WaitForChild("Types"))
 
 local Audio = require(script.Parent.Audio)
@@ -36,15 +37,17 @@ local opened = Instance.new("BindableEvent")
 JournalUI.Opened = opened.Event
 
 local book: Frame
-local spreadHolder: CanvasGroup
+local spreadHolder: Frame
 local pageLabel: TextLabel
 local prevButton: TextButton
 local nextButton: TextButton
 local scrawlLabel: TextLabel
 local journal: Types.JournalPublic = { entries = {}, crossed = {}, marks = {} }
+local notes: { number } = {} -- Story.Notes found, in the order they were read
 local spread = 1
-local SPREADS = 4
+local SPREADS = 5
 local CLUE_SPREAD = 3
+local NOTES_SPREAD = 4 -- their notes; the last spread is the Favours
 local localPlayer = Players.LocalPlayer
 local prices: { [string]: number } = {} -- "pass" / "scare" -> Robux, once known
 
@@ -113,11 +116,12 @@ end
 
 local function rulesTwo(left: Frame, right: Frame)
 	local turns = Config.HollowMan.TurnsPerMove
-	local penalty = Config.EliminationPenaltySteps * Config.Clock.StepMinutes
+	local penalty = Config.EliminationHollowSteps * Config.Clock.StepMinutes
 	heading(left, "Him")
 	para(left, `His piece follows our Candle round the table. Every {turns} turns he takes a step: half an hour, then a whole hour at a time once he's past midnight.`)
 	para(left, "If he reaches the Candle you get <b>one last turn</b>, and the Candle has to move before it ends. If it doesn't, that's the end of you. Keep a Progress card back for that turn. Taking a clue off the Altar is safer than drawing blind.")
-	para(left, `In an event, if you fail you wake up in the <b>basement</b>. The door stays barred until it's over up there. Every one of us he gets costs {penalty} minutes.`)
+	para(left, `In an event, if you fail you wake up in the <b>basement</b>. The door stays barred until it's over up there. Every one of us he gets lets him gain {penalty} minutes on the Candle.`)
+	para(left, "The Candle only moves when we play a card. Nothing else moves it: not the turns, not him.")
 	add(text(left, "<i>He doesn't flicker the lights unless he's close. If they flicker, move.</i>", 14, BODY, RED))
 
 	heading(right, "Three o'clock")
@@ -239,6 +243,26 @@ local function cluePages(left: Frame, right: Frame)
 end
 
 ------------------------------------------------------------------------------------------------
+-- Their notes: the pages the missing four left around the house, as they're found.
+
+local function notePages(left: Frame, right: Frame)
+	heading(left, "Their notes")
+	if #notes == 0 then
+		add(text(left, "<i>Four people came here before you. They left pages lying around the house. Some of them may still be there, in the rooms you haven't built yet.</i>", 14, BODY, FADED))
+		return
+	end
+	-- The first half on the left page, the rest on the right.
+	local half = math.ceil(#notes / 2)
+	for i, index in notes do
+		local note = Story.Notes[index]
+		if note then
+			local p = if i <= half then left else right
+			add(text(p, `{note.text}  <i><font color="#962818">— {note.by}</font></i>`, 13, BODY, INK))
+		end
+	end
+end
+
+------------------------------------------------------------------------------------------------
 -- Favours: the Robux items, kept quiet at the back of the book.
 
 local function priceText(key: string): string
@@ -324,6 +348,8 @@ local function render()
 		rulesTwo(left, right)
 	elseif spread == CLUE_SPREAD then
 		cluePages(left, right)
+	elseif spread == NOTES_SPREAD then
+		notePages(left, right)
 	else
 		favourPages(left, right)
 	end
@@ -342,10 +368,9 @@ local function turnTo(n: number)
 	Audio.play("card", 0.45)
 	render()
 	-- The new pages slide in from the side they were turned from.
-	spreadHolder.GroupTransparency = 0.8
 	spreadHolder.Position = UDim2.fromOffset(if forward then 26 else -26, 0)
 	local info = TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-	TweenService:Create(spreadHolder, info, { GroupTransparency = 0, Position = UDim2.fromOffset(0, 0) }):Play()
+	TweenService:Create(spreadHolder, info, { Position = UDim2.fromOffset(0, 0) }):Play()
 end
 
 local function arrow(label: string, x: number, anchor: number, onClick: () -> ()): TextButton
@@ -404,7 +429,7 @@ function JournalUI.init(gui: ScreenGui)
 	stainCorner.CornerRadius = UDim.new(0.5, 0)
 	stainCorner.Parent = stain
 
-	spreadHolder = Instance.new("CanvasGroup")
+	spreadHolder = Instance.new("Frame")
 	spreadHolder.Name = "Spread"
 	spreadHolder.Size = UDim2.fromScale(1, 1)
 	spreadHolder.BackgroundTransparency = 1
@@ -492,14 +517,20 @@ function JournalUI.scrawl(words: string, seconds: number)
 	end
 	scrawlLabel.Text = words
 	scrawlLabel.Visible = true
-	spreadHolder.GroupTransparency = 0.85
+	spreadHolder.Visible = false
 	task.delay(seconds, function()
 		scrawlLabel.Visible = false
-		spreadHolder.GroupTransparency = 0
+		spreadHolder.Visible = true
 	end)
 end
 
 function JournalUI.setState(state: Types.PublicState)
+	if state.notes and #state.notes ~= #notes then
+		notes = state.notes
+		if spread == NOTES_SPREAD then
+			render()
+		end
+	end
 	if state.journal then
 		local first = #journal.entries == 0 and #state.journal.entries > 0
 		journal = state.journal

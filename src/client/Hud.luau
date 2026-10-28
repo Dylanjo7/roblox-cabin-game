@@ -24,6 +24,9 @@ local toastToken = 0
 
 function Hud.init(): ScreenGui
 	screen = Instance.new("ScreenGui")
+	-- Children always draw over their parents (the Journal's pages over its paper, a card's
+	-- art over the card). Left on the old Global setting, they could draw underneath instead.
+	screen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	screen.Name = "HollowPinesHud"
 	screen.ResetOnSpawn = false
 	screen.IgnoreGuiInset = true

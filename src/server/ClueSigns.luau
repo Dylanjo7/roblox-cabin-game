@@ -22,6 +22,7 @@ local Types = require(Shared:WaitForChild("Types"))
 local Altar = require(script.Parent.Altar)
 local Journal = require(script.Parent.Journal)
 local MapGrid = require(script.Parent.MapGrid)
+local Spots = require(script.Parent.Spots)
 local Secrets = require(script.Parent.Secrets)
 local SignModels = require(script.Parent.SignModels)
 
@@ -142,8 +143,19 @@ local function buildSpot(sign: Sign, spot: Spot)
 	local signRng = Random.new(spot.seed)
 	local id = sign.card.id
 	local m: Model
+	-- A spot on a wall with nothing in front of it (no wardrobe or shelf hiding the sign).
+	local function clearWall(height: number, need: Vector3): CFrame
+		for _ = 1, 15 do
+			local cf = SignModels.wallSpot(centre, half, signRng, height)
+			if Spots.wallClear(cf, need) then
+				return cf
+			end
+		end
+		return SignModels.wallSpot(centre, half, signRng, height)
+	end
 	if id == "music_box" then
-		local at = CFrame.new(centre + Vector3.new(signRng:NextNumber(-hx + 3, hx - 3), 0, signRng:NextNumber(-hz + 3, hz - 3))) * CFrame.Angles(0, signRng:NextNumber(0, 6), 0)
+		-- On open floor: never inside or under the furniture.
+		local at = CFrame.new(Spots.clear(cell, signRng, 1.2)) * CFrame.Angles(0, signRng:NextNumber(0, 6), 0)
 		m = SignModels.musicBox(folder, at)
 	elseif id == "wet_footprints" then
 		-- From one of the room's doorways (or a wall if it has none open) to the middle.
@@ -154,7 +166,8 @@ local function buildSpot(sign: Sign, spot: Spot)
 		local dir = dirs[signRng:NextInteger(1, #dirs)] :: RoomShapes.Dir
 		local dx, dz = RoomShapes.offset(dir)
 		local from = centre + Vector3.new(dx, 0, dz) * (Config.TileSize / 2 - 1.5)
-		local to = centre + Vector3.new(signRng:NextNumber(-3, 3), 0, signRng:NextNumber(-3, 3))
+		-- They stop somewhere you can see, near the middle (not under the table).
+		local to = Spots.clear(cell, signRng, 1.2, 7)
 		m = SignModels.footprints(folder, from, to)
 	elseif id == "wrong_reflection" then
 		-- Something from this room's furniture that the mirror won't show.
@@ -166,15 +179,17 @@ local function buildSpot(sign: Sign, spot: Spot)
 			end
 		end
 		local missing = if #options > 0 then options[signRng:NextInteger(1, #options)] else ""
-		m = SignModels.mirror(folder, SignModels.wallSpot(centre, half, signRng, 6.5), room.Name, missing)
+		m = SignModels.mirror(folder, clearWall(6.5, Vector3.new(3.8, 5.8, 1.5)), room.Name, missing)
 	elseif id == "frost" then
 		local thaw
 		m, thaw = SignModels.frost(folder, room, centre, half, signRng)
 		spot.thaw = thaw
 	elseif id == "tally_marks" then
-		m = SignModels.tally(folder, SignModels.wallSpot(centre, half, signRng, 5), spot.count or 1)
+		m = SignModels.tally(folder, clearWall(5, Vector3.new(3, 2.4, 1.2)), spot.count or 1)
 	else -- the_doll
-		m = SignModels.doll(folder, centre, half, signRng, sign.decoy and revealedCount() >= 3)
+		-- In a corner with nothing in it (the next clear one along if a wardrobe's in the way).
+		local at, corner = Spots.corner(cell, signRng, 0.8)
+		m = SignModels.doll(folder, at, corner, sign.decoy and revealedCount() >= 3)
 	end
 	spot.model = m
 	local anchor = m:FindFirstChild("PromptAnchor", true)

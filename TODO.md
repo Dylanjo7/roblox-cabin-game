@@ -146,6 +146,16 @@ RULES.md is the source of truth. MVP only for now.
   - Mobile: on-screen Start turn / Rotate / Board / Journal buttons; tap once to preview a room on the board, tap again to place
   - The lobby and cabin find each other (`shared/Places`): no place ids to paste
   - Badges (`Config.Badges`, 0 = off): FirstNight, Escaped, AllOut, Caught
+- [x] M. First playtest fixes and more *(written, not yet run in Studio)*
+  - Bug: the Candle jumped (+60 min per player caught in an event; a failed group event with 3 players = +3 h). Now only cards move the Candle; each player caught lets the Hollow Man gain 30 min instead (`Config.EliminationHollowSteps`)
+  - Bug: the Lockdown key could spawn under a table. Event items, Lockdown teleports and clue signs (music box, doll, footprints, mirror, tally marks) now go on clear floor / clear wall (`Spots`)
+  - Bug: the Journal opened blank (pages drawing under the paper): every ScreenGui is ZIndexBehavior Sibling, no CanvasGroup
+  - Deck: 15 rooms (was 21), 18 clues (was 12)
+  - Event item models: brass skeleton key, glass fuse, fuse cabinet, church candle, plank doors with straps; things to find float, turn and glint over a pool of light
+  - Story: 10 notes from the missing four (Story.Notes), found in new rooms, read on screen, kept in the Journal ("Their notes")
+  - Scares: more often; new ones: window slap + handprint, figure running past a doorway, him behind the empty chair, your name whispered, knocks in the walls
+  - Cutscenes (`Cinema`, `Scenes`): intro in the Parlor, he enters, midnight, and an ending scene for each result; the server waits for mid-game ones
+  - Store art in `art/` (AI thumbnail via vidIQ, icon, description in art/STORE_PAGE.md)
 - [ ] C2: clue signs in rooms (lullaby audio still to find)
 - [ ] C3: Journal (M)
 - Clue decisions: the 9 defaults agreed on 2026-10-28 (sign placement, sign shown only while active, second copy re-rolls the spot, Tally 3 rooms 1-5 marks, Doll always appears/fake frowns after 3rd true clue, shared Journal with "Record" prompt, manual cross-out, exits not in deck yet, faked mirror)

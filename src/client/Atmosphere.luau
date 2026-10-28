@@ -23,7 +23,10 @@ local Story = require(Shared:WaitForChild("Story"))
 local Types = require(Shared:WaitForChild("Types"))
 
 local Audio = require(script.Parent.Audio)
+local BoardUI = require(script.Parent.BoardUI)
+local Cinema = require(script.Parent.Cinema)
 local Cutscene = require(script.Parent.Cutscene)
+local Scenes = require(script.Parent.Scenes)
 local HollowManView = require(script.Parent.HollowManView)
 local TablePieces = require(script.Parent.TablePieces)
 
@@ -34,6 +37,7 @@ local dread = Config.Dread
 local level = 1 -- from the clock gap: fog, creaks, glimpses
 local presence = 1 -- from where he physically is: flicker, drone, heartbeat, tint
 local lastHollow: number? = nil
+local lastSceneId: number? = nil -- nil until the first state arrives (no cutscene for old news)
 local lastLastTurn = false
 local lastEventId: string? = nil
 local phase: Types.Phase = "Lobby"
@@ -287,7 +291,20 @@ local function onClockChange(state: Types.PublicState)
 	end
 	local hollow = clock.hollow
 	-- (His steps are heard as his piece lands each one on the table: TablePieces.HollowStepped.)
-	if hollow ~= nil and lastHollow == nil then
+	-- When his move comes with a cutscene (he comes onto the clock, he reaches midnight) the
+	-- server says so and the table waits for it; it carries its own line. Without one (or when
+	-- it can't play: you're placing a room, or another is showing) it's just the line.
+	local sceneId = clock.sceneId or 0
+	local scene = if sceneId ~= lastSceneId and lastSceneId ~= nil then clock.scene else nil
+	lastSceneId = sceneId
+	if scene and not BoardUI.isViewing() and not Cinema.isPlaying() then
+		task.spawn(function()
+			local played = if scene == "enters" then Scenes.enters() else Scenes.midnight()
+			if not played then
+				Cutscene.beat(if scene == "enters" then Story.Beats.enters else Story.Beats.midnight, `beat_{scene}`)
+			end
+		end)
+	elseif hollow ~= nil and lastHollow == nil then
 		Cutscene.beat(Story.Beats.enters, "beat_enters")
 	elseif hollow ~= nil and lastHollow ~= nil and hollow > lastHollow then
 		if hollow >= Config.Clock.MidnightStep and lastHollow < Config.Clock.MidnightStep then

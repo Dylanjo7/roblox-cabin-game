@@ -42,12 +42,12 @@ appears as text. If a recording runs long, the game waits for it before the next
 | arrival_1 | Narrator | The driver's door hangs open. The radio hisses. He's gone. | ~4 s |
 | arrival_2 | Narrator | Somebody left the porch light on. | ~2.5 s |
 
-### Inside, when the door slams
+### Inside, when the door slams (the intro cutscene)
 
 | Key | Who | Line | Aim for |
 | --- | --- | --- | --- |
-| intro_1 | Narrator | A fire is already lit. On the Parlor table: a round board, a deck of cards, and one candle. Carved into the rim: PLAY UNTIL THREE. | ~8 s |
-| intro_2 | Narrator | Behind you, the front door slams. It won't open again. Every window shows the same black trees. | ~6 s |
+| intro_1 | Narrator | Behind you, the front door slams. It won't open again. Every window shows the same black trees. | ~5 s |
+| intro_2 | Narrator | A fire is already lit. On the Parlor table: a round board, a deck of cards, and one candle. Carved into the rim: PLAY UNTIL THREE. | ~7 s |
 | intro_3 | Narrator | The locals have a name for what lives out there. They call him the Hollow Man. He keeps time by your candle, and he's coming to put it out. | ~8 s |
 | intro_4 | Narrator | Build the house. Find the way out. Don't let him catch the light. | ~4 s |
 

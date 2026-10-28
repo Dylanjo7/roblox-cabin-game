@@ -13,6 +13,7 @@ local Types = require(Shared:WaitForChild("Types"))
 
 local MapGrid = require(script.Parent.Parent.MapGrid)
 local Table = require(script.Parent.Parent.Table)
+local EventItems = require(script.Parent.EventItems)
 local EventKit = require(script.Parent.EventKit)
 
 type EventRun = Types.EventRun
@@ -74,7 +75,7 @@ function Lockdown.start(run: EventRun)
 					continue -- sealed doorways are already wall
 				end
 				local panel = EventKit.part("Door", doorway.Size, doorway.CFrame, DOOR, folder)
-				panel.Material = Enum.Material.WoodPlanks
+				EventItems.dressDoor(panel)
 				table.insert(list, panel)
 			end
 		end
@@ -89,7 +90,8 @@ function Lockdown.start(run: EventRun)
 	local keys: { [string]: boolean } = {}
 	for _, player in run.players do
 		local cell = if #rooms > 0 then EventKit.pick(rooms, 1)[1] else parlor
-		EventKit.teleport(player, CFrame.new(EventKit.spotIn(cell) + Vector3.new(0, 3, 0)))
+		-- Put down somewhere clear (never inside the furniture).
+		EventKit.teleport(player, CFrame.new(EventKit.clearSpot(cell, 2.2) + Vector3.new(0, 3, 0)))
 		local k = MapGrid.key(cell.x, cell.z)
 		local slamAt = (panels[k] or {})[1]
 		if slamAt then
@@ -97,19 +99,17 @@ function Lockdown.start(run: EventRun)
 		end
 		if not keys[k] then
 			keys[k] = true
-			local key = EventKit.part("Key", Vector3.new(0.3, 1.1, 0.15), CFrame.new(EventKit.spotIn(cell) + Vector3.new(0, 0.7, 0)), KEY, folder)
-			key.Material = Enum.Material.Neon
-			key.CanCollide = false
-			local glow = Instance.new("PointLight")
-			glow.Color = KEY
-			glow.Range = 8
-			glow.Parent = key
+			-- On clear floor (never under a table), floating and glinting over a pool of light.
+			local floor = EventKit.clearSpot(cell, 1.2)
+			local keyModel, key = EventItems.key(folder, CFrame.new(floor + Vector3.new(0, 2.2, 0)) * CFrame.Angles(0, EventKit.rng:NextNumber(0, 6), 0))
+			local pool = EventItems.pool(folder, floor, KEY)
 			local prompt = EventKit.prompt(key, "Take", "Key")
 			prompt.Triggered:Connect(function(player: Player)
 				if not run.isActive(player) then
 					return
 				end
-				key:Destroy()
+				keyModel:Destroy()
+				pool:Destroy()
 				openPathFrom(run, cell)
 				EventKit.notifyAll(run, `{player.DisplayName} found a key. The way back to the table is open!`)
 			end)

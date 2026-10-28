@@ -11,6 +11,7 @@ local RoomShapes = require(Shared:WaitForChild("RoomShapes"))
 local Types = require(Shared:WaitForChild("Types"))
 
 local MapGrid = require(script.Parent.Parent.MapGrid)
+local Spots = require(script.Parent.Parent.Spots)
 
 type Cell = MapGrid.Cell
 type EventRun = Types.EventRun
@@ -101,7 +102,14 @@ function EventKit.pick<T>(list: { T }, n: number): { T }
 	return out
 end
 
--- A random point on the floor of a room, away from the walls.
+-- A clear point on the floor of a room, for an item or a person: nothing over it (no table,
+-- bed or shelf) and nothing beside it at standing height (see Spots).
+function EventKit.clearSpot(cell: Cell, clearance: number?): Vector3
+	return Spots.clear(cell, EventKit.rng, clearance)
+end
+
+-- A random point on the floor of a room, away from the walls (furniture may be there: fine for
+-- someone walking through, not for something to find; use clearSpot for that).
 function EventKit.spotIn(cell: Cell): Vector3
 	local spread = Config.Events.ItemSpread
 	local hx, hz = MapGrid.halfSize(cell)

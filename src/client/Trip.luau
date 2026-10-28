@@ -130,6 +130,7 @@ end
 
 local function makeGui(): (ScreenGui, TextLabel, TextLabel, TextLabel, Frame)
 	local gui = Instance.new("ScreenGui")
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	gui.Name = "Trip"
 	gui.IgnoreGuiInset = true
 	gui.DisplayOrder = 40

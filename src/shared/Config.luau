@@ -40,7 +40,7 @@ local Config = {
 	NoValidSpotPenaltySteps = 1, -- +30 min when a selected room has nowhere valid to go
 	PeekCount = 3,
 
-	GameOverSeconds = 8, -- how long the result shows before the table returns to the lobby
+	GameOverSeconds = 22, -- how long the ending (its cutscene) shows before the table returns to the lobby
 	MaxPlayers = 4, -- also set the cabin place's Max Players to 4 on the Creator Dashboard
 	LobbyStartSeconds = 20, -- once someone sits, the run starts when everyone has, or after this
 	SwapChooseSeconds = 15, -- time to pick who to swap hands with (then the next player is picked)
@@ -69,27 +69,28 @@ local Config = {
 
 	-- Copies of each card in the shuffled deck (the Crawlspace is set aside, not shuffled in)
 	CardCopies = {
-		-- Rooms: one of each (21, same door-shape mix as RULES.md's 6/6/4/2/3)
+		-- Rooms: 15 of the 21 (playtest: too many rooms, too few clues). Door shapes 4 straight /
+		-- 4 corner / 3 three-way / 2 four-way / 2 single. Set a 0 back to 1 to put a room back in.
 		front_hall = 1,
 		back_hall = 1,
 		gallery = 1,
-		pantry = 1,
+		pantry = 0,
 		stair_hall = 1,
-		sun_porch = 1,
+		sun_porch = 0,
 		kitchen = 1,
 		dining_room = 1,
 		living_room = 1,
-		laundry_room = 1,
-		sewing_room = 1,
+		laundry_room = 0,
+		sewing_room = 0,
 		library = 1,
 		den = 1,
 		sitting_room = 1,
 		music_room = 1,
-		game_room = 1,
+		game_room = 0,
 		grand_hall = 1,
 		foyer = 1,
-		bathroom = 1,
-		bedroom = 1,
+		bathroom = 1, -- unlocks the Attic
+		bedroom = 0,
 		linen_closet = 1,
 		-- Exit rooms: one of each.
 		boathouse = 1,
@@ -115,13 +116,13 @@ local Config = {
 		the_knock = 1,
 		lockdown = 1,
 		he_walks = 1,
-		-- Clues: 2 each per RULES.md.
-		music_box = 2,
-		wet_footprints = 2,
-		wrong_reflection = 2,
-		frost = 2,
-		tally_marks = 2,
-		the_doll = 2,
+		-- Clues: 3 each (18; RULES.md had 2 each, playtest wanted more).
+		music_box = 3,
+		wet_footprints = 3,
+		wrong_reflection = 3,
+		frost = 3,
+		tally_marks = 3,
+		the_doll = 3,
 	} :: { [string]: number },
 	-- Not in the deck yet
 	ExitCopiesEach = 1,
@@ -136,7 +137,9 @@ local Config = {
 		final_escape = 90,
 		attic = 60,
 	} :: { [string]: number },
-	EliminationPenaltySteps = 2, -- +60 min per eliminated player
+	-- Each player caught in an event lets the Hollow Man gain this many steps (30 min each) on the
+	-- Candle. The Candle itself never moves for events: only cards move it.
+	EliminationHollowSteps = 1,
 	Events = {
 		ResultSeconds = 3, -- pause on the result before everyone returns to their seats
 		ItemSpread = 12, -- event items spawn up to this many studs from a room's centre
@@ -249,13 +252,19 @@ local Config = {
 
 	-- Jump scares (client/Scares): rare, never at the table, only once he's on the clock.
 	Scares = {
-		MinGapSeconds = 90, -- at least this long between any two scares
-		BehindYouChance = 0.25, -- each time you spin round quickly
+		MinGapSeconds = 55, -- at least this long between any two scares
+		BehindYouChance = 0.35, -- each time you spin round quickly
 		BehindYouShowSeconds = 0.45,
-		CornerChance = 0.08, -- each time you walk into another room
+		CornerChance = 0.14, -- each time you walk into another room
 		CornerWaitSeconds = 10, -- he waits in the corner this long for you to notice him
 		FaceSeconds = 0.55, -- his face when you're caught in an event
-		JournalChance = 0.15, -- opening the Journal once he's past midnight
+		JournalChance = 0.25, -- opening the Journal once he's at 11 PM or later on the clock
+		JournalFromStep = 4, -- 11 PM
+		WindowBangChance = 0.06, -- each half second you're close to a window and facing it
+		RunnerChance = 0.03, -- each half second an open doorway is in view a little way off
+		EmptyChairChance = 0.3, -- each time you look at an empty chair while you're at the table
+		WhisperPerSecond = 0.004, -- someone whispers your name (about every 4 minutes of walking)
+		KnockPerSecond = 0.006, -- knocks in the walls (not a scare slot; they just happen)
 	},
 
 	-- Badges (Creator Dashboard > your experience > Engagement > Badges). Paste each badge's id;
@@ -305,6 +314,12 @@ local Config = {
 		ending_never_built_2 = "",
 	} :: { [string]: string },
 
+	-- Mid-game cutscenes: how long the table waits for them after his move (client/Scenes).
+	Cinematics = {
+		EnterSeconds = 7.5, -- he comes onto the clock
+		MidnightSeconds = 6.5, -- he reaches midnight
+	},
+
 	-- Robux items. Make them on the Creator Dashboard (your experience > Monetization) and put
 	-- their ids here; 0 = not set up yet (the item says so instead of opening a purchase).
 	-- Cosmetic and pranks only: nothing you can buy helps you escape.
@@ -319,6 +334,12 @@ local Config = {
 			{ id = "blood", name = "Blood Moon", color = Color3.fromRGB(255, 50, 40), free = false },
 		},
 		ScareRevealSeconds = 2, -- how long before the scared player is told who paid for it
+	},
+
+	-- Notes from the missing four (Story.Notes): each newly built room (not the Parlor or the
+	-- Crawlspace) has this chance of holding the next one, until they've all been placed.
+	Notes = {
+		ChancePerRoom = 0.55,
 	},
 
 	-- Everyone's lantern (key 1 to hold it up).

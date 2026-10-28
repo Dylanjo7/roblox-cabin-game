@@ -42,6 +42,7 @@ end
 function Cutscene.init(gui: ScreenGui)
 	-- Its own full-screen layer above everything, covering the top bar too.
 	local layer = Instance.new("ScreenGui")
+	layer.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	layer.Name = "HollowPinesCutscene"
 	layer.IgnoreGuiInset = true
 	layer.ResetOnSpawn = false

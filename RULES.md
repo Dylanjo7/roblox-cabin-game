@@ -38,7 +38,7 @@ The card stand faces the active player, who starts the turn once everyone is sea
 3. **Play one card from your hand** and follow its type's rules (below). Once you pick a card to play, you're committed to it.
 4. **End the turn.** The ring rotates to the next player.
 
-A round is one turn for every seated player. Turns alone never move the clock; only cards, penalties and eliminations do.
+A round is one turn for every seated player. Only cards move the Candle: never a turn, a round or an event.
 
 ## Room cards
 
@@ -52,7 +52,7 @@ Room cards add a room to the map and build it in the world at the matching spot.
 
 ## Progress cards and the clock
 
-Progress cards move the shared Candle forward 30 or 60 minutes, and most also carry a side effect that can help or hurt. The clock moves only from Progress cards, card penalties, and players eliminated in events.
+Progress cards move the shared Candle forward 30 or 60 minutes, and most also carry a side effect that can help or hurt. The Candle moves only when a card is played: Progress cards, and the penalty for a room card with nowhere to go.
 
 | Card | Time | Side effect |
 | --- | --- | --- |
@@ -131,7 +131,7 @@ An Event card starts the moment it's drawn and pulls every player away from the 
 **Elimination**
 
 - A player who fails an event wakes up in the basement under the Crawlspace. Its door is barred until the event ends.
-- Every eliminated player adds 60 minutes to the clock. Two players caught in one event means +2 hours.
+- Every player caught lets the Hollow Man gain 30 minutes on the Candle (if he's on the track yet). The Candle itself doesn't move.
 - When the event ends the basement door opens, and eliminated players climb out and walk back to the table. The next turn waits until everyone is seated. Elimination costs time, not your spot in the run.
 
 ## 3 AM and the final escape
@@ -151,15 +151,15 @@ With fewer than three clues, players have to guess between the exits that still 
 
 ## Deck list
 
-The shuffled deck holds 62 cards. The Crawlspace is set aside for setup and isn't shuffled in.
+The shuffled deck holds 62 cards (after the first playtest: fewer rooms, more clues). The Crawlspace is set aside for setup and isn't shuffled in.
 
 | Card | Type | Copies |
 | --- | --- | --- |
-| Hallway (2 doors, straight) | Room | 6 |
-| Corner (2 doors, L-shape) | Room | 6 |
-| T-Junction (3 doors) | Room | 4 |
+| Hallway (2 doors, straight) | Room | 4 |
+| Corner (2 doors, L-shape) | Room | 4 |
+| T-Junction (3 doors) | Room | 3 |
 | Crossroads (4 doors) | Room | 2 |
-| Closet Room (1 door, extra hiding spots) | Room | 3 |
+| Closet Room (1 door, extra hiding spots) | Room | 2 |
 | Exit rooms (8 different, see Exit rooms) | Room | 8 |
 | Steady Hands | Progress | 3 |
 | Long Night | Progress | 3 |
@@ -169,7 +169,7 @@ The shuffled deck holds 62 cards. The Crawlspace is set aside for setup and isn'
 | Cold Draft | Progress | 1 |
 | Shaking Floor | Progress | 1 |
 | Swap | Progress | 1 |
-| Music Box, Wet Footprints, Wrong Reflection, Frost, Tally Marks, The Doll | Clue | 2 each, 12 total |
+| Music Box, Wet Footprints, Wrong Reflection, Frost, Tally Marks, The Doll | Clue | 3 each, 18 total |
 | Fuse Box, The Knock, Candlelight, He Walks, Rising Water, Lockdown | Event | 1 each, 6 total |
 
 If the deck runs out, players can only take clues off the Altar, and the Hollow Man moves an extra 60 minutes once.

@@ -41,6 +41,9 @@ local hollowWheel: Wheel
 local candleShown = 0 -- may be fractional while moving
 local hollowShown = -1
 local candleTurning = false
+local snuffed = false -- the flame put out (the "caught" ending)
+local lastCandleAt = CFrame.new()
+local lastHollowAt = CFrame.new()
 local hollowTurning = false
 local running = false
 
@@ -249,13 +252,35 @@ function TablePieces.init()
 			cframes[i] = candleAt * rest
 		end
 		workspace:BulkMoveTo(candleParts, cframes, Enum.BulkMoveMode.FireCFrameChanged)
-		flameLight.Brightness = 1.5 + math.noise(os.clock() * 6) * 0.6
+		flameLight.Brightness = if snuffed then 0 else 1.5 + math.noise(os.clock() * 6) * 0.6
+		lastCandleAt = candleAt
 
 		-- He faces the way the clock runs (the track frame's +X), rigid on his stick.
 		local hollowAt = pivot * ClockTrack.localCFrame(hollowShown, Config.Table.HollowTrackRadius) * raise * CFrame.Angles(0, -math.pi / 2, 0)
 		base.CFrame = hollowAt * CFrame.new(0, 0.04, 0) * CFrame.Angles(0, 0, math.rad(90))
+		lastHollowAt = hollowAt
 		HollowManRig.pose(rig, hollowAt * CFrame.new(0, 0.08, 0), dt, 0, false, if hollowTurning then nil else headPosition())
 	end)
+end
+
+-- Where the pieces are now (for cutscenes): their bases on the ring, the Hollow Man's facing
+-- the way the clock runs.
+function TablePieces.candleAt(): CFrame
+	return lastCandleAt
+end
+
+function TablePieces.hollowAt(): CFrame
+	return lastHollowAt
+end
+
+-- Put the Candle's flame out (or light it again).
+function TablePieces.snuff(out: boolean)
+	snuffed = out
+	for _, p in candleParts do
+		if p.Name == "Flame" then
+			p.Transparency = if out then 1 else 0
+		end
+	end
 end
 
 return TablePieces

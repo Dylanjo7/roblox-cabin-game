@@ -190,11 +190,10 @@ local function mouth(doll: Model, frown: boolean)
 end
 
 -- Sits in a room corner, facing the walls (so you have to lean round to see its face).
-function SignModels.doll(parent: Instance, centre: Vector3, half: Vector2, rng: Random, frown: boolean): Model
+-- The doll at `spot` on the floor, facing `toward` (into its corner, away from the room).
+function SignModels.doll(parent: Instance, spot: Vector3, toward: Vector3, frown: boolean): Model
 	local m = model(parent, "TheDoll")
-	local corner = Vector3.new(if rng:NextNumber() < 0.5 then -1 else 1, 0, if rng:NextNumber() < 0.5 then -1 else 1)
-	local spot = centre + corner * Vector3.new(half.X - 1.6, 0, half.Y - 1.6)
-	local at = CFrame.lookAt(spot, spot + corner) -- facing into the corner
+	local at = CFrame.lookAt(spot, spot + toward) -- facing into the corner
 	part(m, "PromptAnchor", Vector3.new(0.9, 0.9, 0.7), at * CFrame.new(0, 0.45, 0), CLOTH, Enum.Material.Fabric)
 	local head = part(m, "Head", Vector3.new(0.7, 0.7, 0.7), at * CFrame.new(0, 1.2, -0.05), Color3.fromRGB(210, 196, 176), Enum.Material.Fabric)
 	head.Shape = Enum.PartType.Ball

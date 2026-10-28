@@ -20,11 +20,14 @@ local HollowManView = require(script.Parent.HollowManView)
 local Hud = require(script.Parent.Hud)
 local Input = require(script.Parent.Input)
 local JournalUI = require(script.Parent.JournalUI)
+local NoteUI = require(script.Parent.NoteUI)
 local PeekUI = require(script.Parent.PeekUI)
 local SwapUI = require(script.Parent.SwapUI)
 local Reflections = require(script.Parent.Reflections)
 local RoomRise = require(script.Parent.RoomRise)
+local Scenes = require(script.Parent.Scenes)
 local Scares = require(script.Parent.Scares)
+local Spinners = require(script.Parent.Spinners)
 local TablePieces = require(script.Parent.TablePieces)
 local TouchControls = require(script.Parent.TouchControls)
 local Trip = require(script.Parent.Trip)
@@ -37,17 +40,19 @@ SwapUI.init(gui)
 EventUI.init(gui)
 AltarUI.init(gui)
 JournalUI.init(gui)
+NoteUI.init(gui)
 Cutscene.init(gui)
 HollowManView.init()
 TablePieces.init()
 Clocks.init()
 RoomRise.init()
 Scares.init(gui)
+Spinners.init()
 TouchControls.init(gui)
 Atmosphere.init()
 Reflections.init()
 Cursor.init(gui, function(): boolean
-	return JournalUI.isOpen() or PeekUI.isOpen() or SwapUI.isOpen() or AltarUI.isOpen() or BoardUI.isViewing() or Cutscene.isShowing()
+	return JournalUI.isOpen() or NoteUI.isOpen() or PeekUI.isOpen() or SwapUI.isOpen() or AltarUI.isOpen() or BoardUI.isViewing() or Cutscene.isShowing()
 end)
 
 Input.bind(Enum.KeyCode.T, function()
@@ -85,12 +90,22 @@ local function setState(state)
 			Cutscene.playArrival(true)
 		end)
 	elseif doorWasClosed == false and doorClosed then
-		Cutscene.playIntro()
+		-- The intro cutscene (the plain text version if it can't play).
+		task.spawn(function()
+			if not Scenes.intro() then
+				Cutscene.playIntro()
+			end
+		end)
 	end
 	doorWasClosed = doorClosed
 	if state.phase ~= lastPhase then
 		if state.phase == "GameOver" and state.result then
-			Cutscene.playEnding(state.result.ending)
+			local ending = state.result.ending
+			task.spawn(function()
+				if not Scenes.ending(ending) then
+					Cutscene.playEnding(ending)
+				end
+			end)
 		end
 		lastPhase = state.phase
 	end

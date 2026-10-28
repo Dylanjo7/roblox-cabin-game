@@ -13,21 +13,22 @@ local RoomShapes = require(Shared:WaitForChild("RoomShapes"))
 local Types = require(Shared:WaitForChild("Types"))
 
 local MapGrid = require(script.Parent.Parent.MapGrid)
+local EventItems = require(script.Parent.EventItems)
 local EventKit = require(script.Parent.EventKit)
 
 type EventRun = Types.EventRun
 
 local FUSE_COLOR = Color3.fromRGB(255, 205, 80)
-local BOX_COLOR = Color3.fromRGB(90, 92, 96)
 
 local FuseBox = {}
 
--- A random built room other than the Parlor and Crawlspace (the Parlor if there's none).
+-- A clear spot on the floor of a random built room other than the Parlor and Crawlspace (the
+-- Parlor if there's none): never under or inside furniture.
 local function fuseSpot(): Vector3
 	local rooms = EventKit.rooms({ parlor = true, crawlspace = true })
 	local cell = if #rooms > 0 then EventKit.pick(rooms, 1)[1] else MapGrid.get(0, 0)
 	assert(cell, "The Parlor is missing")
-	return EventKit.spotIn(cell) + Vector3.new(0, 0.8, 0)
+	return EventKit.clearSpot(cell, 1.2)
 end
 
 local function darken(run: EventRun)
@@ -64,14 +65,10 @@ function FuseBox.start(run: EventRun)
 	darken(run)
 	local folder = EventKit.folder(run, "FuseBoxEvent")
 
-	-- The fuse: glows so it can be found in the dark.
-	local fuse = EventKit.part("Fuse", Vector3.new(0.6, 1.2, 0.6), CFrame.new(fuseSpot()), FUSE_COLOR, folder)
-	fuse.Material = Enum.Material.Neon
-	fuse.CanCollide = false
-	local glow = Instance.new("PointLight")
-	glow.Color = FUSE_COLOR
-	glow.Range = 10
-	glow.Parent = fuse
+	-- The fuse: floating, turning and glowing over a pool of light, so it can be found in the dark.
+	local floor = fuseSpot()
+	local fuseModel, fuse = EventItems.fuse(folder, CFrame.new(floor + Vector3.new(0, 1.8, 0)))
+	local pool = EventItems.pool(folder, floor, FUSE_COLOR)
 	local pickUp = EventKit.prompt(fuse, "Pick up", "Fuse")
 	pickUp.Triggered:Connect(function(player: Player)
 		if not run.isActive(player) or run.data.carrier then
@@ -84,20 +81,15 @@ function FuseBox.start(run: EventRun)
 		end
 		run.data.carrier = player
 		pickUp.Enabled = false
-		fuse.Anchored = false
-		fuse.Massless = true
-		fuse.CFrame = root.CFrame * CFrame.new(1.2, 0, -0.8)
-		local weld = Instance.new("WeldConstraint")
-		weld.Part0 = root
-		weld.Part1 = fuse
-		weld.Parent = fuse
+		pool:Destroy()
+		EventItems.carry(fuseModel, root, CFrame.new(1.2, 0, -0.8))
 		EventKit.notifyAll(run, `{player.DisplayName} has the fuse. Get it to the fuse box in the Parlor!`)
 	end)
 
-	-- The fuse box, on the Parlor's north wall.
+	-- The fuse cabinet, on the Parlor's north wall, facing into the room.
 	local parlor = RoomShapes.cellPosition(0, 0)
 	local inner = Config.TileSize / 2 - Config.Room.WallThickness
-	local box = EventKit.part("FuseBox", Vector3.new(3, 4, 0.6), CFrame.new(parlor + Vector3.new(-12, 5, -inner + 0.3)), BOX_COLOR, folder)
+	local box, powerOn = EventItems.fuseBox(folder, CFrame.new(parlor + Vector3.new(-12, 5, -inner + 0.8)) * CFrame.Angles(0, math.pi, 0))
 	local insert = EventKit.prompt(box, "Insert fuse", "Fuse box")
 	insert.Triggered:Connect(function(player: Player)
 		if not run.isActive(player) then
@@ -107,7 +99,8 @@ function FuseBox.start(run: EventRun)
 			Remotes.notify(player, "You need the fuse.")
 			return
 		end
-		box.Color = FUSE_COLOR
+		fuseModel:Destroy()
+		powerOn()
 		run.complete()
 	end)
 end

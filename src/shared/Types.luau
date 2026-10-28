@@ -44,6 +44,8 @@ export type ClockPublic = {
 	candle: number,
 	hollow: number?, -- nil while the Hollow Man is off the track
 	lastTurn: boolean, -- he has reached the Candle: the Candle must move this turn
+	sceneId: number?, -- changes when one of his moves comes with a cutscene
+	scene: string?, -- that cutscene: "enters" or "midnight"
 }
 
 export type EventPublic = {
@@ -111,6 +113,7 @@ export type PublicState = {
 	altar: { Card }?, -- Clue cards on the Altar, top (active) first
 	arrival: { doorClosed: boolean }?, -- the front door has slammed behind the players
 	journal: JournalPublic?,
+	notes: { number }?, -- Story.Notes indexes found so far this run, in the order they were read
 }
 
 return {}

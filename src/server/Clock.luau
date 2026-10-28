@@ -1,6 +1,7 @@
 --!strict
 -- The clock track: the group's Candle and the Hollow Man, as step indexes (0 = 9:00 PM, 12 = 3:00 AM).
--- Only Progress cards, card penalties and (later) eliminations move the Candle; turns alone never do.
+-- Only cards move the Candle (Progress cards, and the penalty for a room with nowhere to go):
+-- never a turn, a round or an event. Players caught in an event let the Hollow Man gain on it.
 -- The Hollow Man moves once every Config.HollowMan.TurnsPerMove turns (4: once round the table
 -- with 4 players; solo, every 4th of your turns). His first move puts him on the track at
 -- 9:00 PM; after that he moves +30 min, or +60 min once he is at or past midnight. If he
@@ -27,6 +28,10 @@ local movedThisTurn = false
 local candleStepsThisTurn = 0 -- for timing the table animation
 local turnsSinceMove = 0
 local deckOutUsed = false
+-- The cutscene clients play for his last scheduled move ("enters" / "midnight"); the id changes
+-- each time there's a new one.
+local sceneId = 0
+local sceneKind: string? = nil
 
 local function update()
 	Table.setClock(candle, hollow)
@@ -41,6 +46,7 @@ function Clock.reset()
 	candleStepsThisTurn = 0
 	turnsSinceMove = 0
 	deckOutUsed = false
+	sceneKind = nil
 	update()
 end
 
@@ -74,6 +80,16 @@ local function moveHollowMan(steps: number)
 	update()
 end
 
+-- Someone was caught in an event: he gains this many steps on the Candle. Returns false when
+-- he isn't on the track yet (then it costs nothing).
+function Clock.hollowGains(steps: number): boolean
+	if hollow == nil or steps <= 0 then
+		return false
+	end
+	moveHollowMan(steps)
+	return true
+end
+
 -- Hold the Line. Returns false when he isn't on the track yet (nothing to push).
 function Clock.pushHollowMan(steps: number): boolean
 	if hollow == nil then
@@ -84,17 +100,24 @@ function Clock.pushHollowMan(steps: number): boolean
 end
 
 -- His move after every TurnsPerMove turns. Returns how many steps his piece walks on the table
--- (coming onto the track counts as one).
-local function moveOnSchedule(): number
+-- (coming onto the track counts as one), and the seconds of cutscene that go with it.
+local function moveOnSchedule(): (number, number)
 	local current = hollow
 	if current == nil then
 		hollow = Config.HollowMan.EntryStep
-		return Config.HollowMan.EntryStep + 1
+		sceneId += 1
+		sceneKind = "enters"
+		return Config.HollowMan.EntryStep + 1, Config.Cinematics.EnterSeconds
 	end
 	local steps = if current >= Config.Clock.MidnightStep then Config.HollowMan.StepsPerRoundFromMidnight else Config.HollowMan.StepsPerRound
 	local after = math.min(current + steps, Config.Clock.Steps)
 	hollow = after
-	return after - current
+	if current < Config.Clock.MidnightStep and after >= Config.Clock.MidnightStep then
+		sceneId += 1
+		sceneKind = "midnight"
+		return after - current, Config.Cinematics.MidnightSeconds
+	end
+	return after - current, 0
 end
 
 -- How long the table needs to show this turn's moves (the Candle's hops, then his steps).
@@ -116,16 +139,16 @@ function Clock.resolveTurnEnd(): (TurnEndStatus, number)
 		GameState.endRun(false, "The Hollow Man caught the Candle and it didn't move on the last turn.", "caught")
 		return "Over", 0
 	end
-	local hollowSteps = 0
+	local hollowSteps, sceneSeconds = 0, 0
 	turnsSinceMove += 1
 	if turnsSinceMove >= Config.HollowMan.TurnsPerMove then
 		turnsSinceMove = 0
-		hollowSteps = moveOnSchedule()
+		hollowSteps, sceneSeconds = moveOnSchedule()
 	end
 	local caughtAt = hollow
 	lastTurn = caughtAt ~= nil and caughtAt >= candle
 	update()
-	return if lastTurn then "LastTurn" else "Continue", animationSeconds(hollowSteps)
+	return if lastTurn then "LastTurn" else "Continue", animationSeconds(hollowSteps) + sceneSeconds
 end
 
 function Clock.init()
@@ -138,7 +161,7 @@ function Clock.init()
 	end)
 
 	StateSync.register("clock", function()
-		return { candle = candle, hollow = hollow, lastTurn = lastTurn }
+		return { candle = candle, hollow = hollow, lastTurn = lastTurn, sceneId = sceneId, scene = sceneKind }
 	end)
 end
 

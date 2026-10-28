@@ -10,12 +10,11 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Types = require(Shared:WaitForChild("Types"))
 
+local EventItems = require(script.Parent.EventItems)
 local EventKit = require(script.Parent.EventKit)
 
 type EventRun = Types.EventRun
 
-local WAX = Color3.fromRGB(235, 225, 200)
-local FLAME = Color3.fromRGB(255, 170, 60)
 local UNLIT_TEXT = Color3.fromRGB(235, 225, 200)
 local LIT_TEXT = Color3.fromRGB(255, 200, 110)
 
@@ -28,15 +27,9 @@ function Candlelight.start(run: EventRun)
 	local lit = 0
 
 	for _, cell in rooms do
-		local base = EventKit.spotIn(cell)
-		local height = Config.Events.CandleHeight
-		local holder = EventKit.part("Holder", Vector3.new(1.6, 0.3, 1.6), CFrame.new(base + Vector3.new(0, 0.15, 0)), Color3.fromRGB(70, 60, 50), folder)
-		local wax = EventKit.part("Candle", Vector3.new(0.6, height, 0.6), CFrame.new(base + Vector3.new(0, 0.3 + height / 2, 0)), WAX, folder)
-		local flame = EventKit.part("Flame", Vector3.new(0.3, 0.45, 0.3), CFrame.new(base + Vector3.new(0, 0.3 + height + 0.25, 0)), FLAME, folder)
-		flame.Material = Enum.Material.Neon
-		flame.CanCollide = false
-		flame.Transparency = 1
-		holder.CanCollide = false
+		-- On clear floor, never under or inside furniture.
+		local base = EventKit.clearSpot(cell, 1.2)
+		local wax, light = EventItems.candle(folder, base, Config.Events.CandleHeight)
 		local label = EventKit.marker(wax, "Candle · unlit", UNLIT_TEXT)
 
 		local done = false
@@ -47,11 +40,7 @@ function Candlelight.start(run: EventRun)
 			end
 			done = true
 			prompt.Enabled = false
-			flame.Transparency = 0
-			local light = Instance.new("PointLight")
-			light.Color = FLAME
-			light.Range = 14
-			light.Parent = flame
+			light()
 			label.Text = "Candle · lit"
 			label.TextColor3 = LIT_TEXT
 			lit += 1

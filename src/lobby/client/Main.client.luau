@@ -10,6 +10,7 @@ local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Co
 local ShopUI = require(script.Parent.ShopUI)
 
 local screen = Instance.new("ScreenGui")
+screen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screen.Name = "LobbyHud"
 screen.ResetOnSpawn = false
 

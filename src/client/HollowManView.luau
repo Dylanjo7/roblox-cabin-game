@@ -26,6 +26,7 @@ export type Handle = {
 	destroy: () -> (),
 	setWatch: (watch: boolean) -> (), -- start or stop his head following you
 	position: () -> Vector3,
+	setPivot: (cf: CFrame, speed: number?) -> (), -- move him (speed: how fast he's going, for his gait)
 }
 
 local HollowManView = {}
@@ -78,6 +79,10 @@ function HollowManView.spawnLocal(cf: CFrame, watch: boolean, real: boolean): Ha
 		end,
 		position = function(): Vector3
 			return figure.pivot.Position
+		end,
+		setPivot = function(cf: CFrame, speed: number?)
+			figure.pivot = cf
+			figure.speed = speed or 0
 		end,
 	}
 end

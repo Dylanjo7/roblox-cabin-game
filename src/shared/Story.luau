@@ -29,10 +29,11 @@ Story.ArrivalAfterTrip = {
 	"Somebody left the porch light on.",
 }
 
--- Shown one line at a time once you're inside and the door slams behind you.
+-- The intro cutscene once you're inside and the door slams behind you (client/Scenes): one line
+-- per shot, in this order: the door, the fire and the table, him out in the trees, the clock.
 Story.Intro = {
-	"A fire is already lit. On the Parlor table: a round board, a deck of cards, and one candle. Carved into the rim: PLAY UNTIL THREE.",
 	"Behind you, the front door slams. It won't open again. Every window shows the same black trees.",
+	"A fire is already lit. On the Parlor table: a round board, a deck of cards, and one candle. Carved into the rim: PLAY UNTIL THREE.",
 	"The locals have a name for what lives out there. They call him the Hollow Man. He keeps time by your candle, and he's coming to put it out.",
 	"Build the house. Find the way out. Don't let him catch the light.",
 }
@@ -44,6 +45,22 @@ Story.Beats = {
 	midnight = "Midnight. His steps grow longer.",
 	caught = "He's at the door. Move the Candle, or it goes out.",
 	pushedBack = "For a moment, the footsteps retreat.",
+}
+
+-- Notes left around the cabin by the four friends on the ranger station's "missing" poster
+-- (Mara, Theo, Jun and Cal), found in rooms as they're built, always in this order (server/Notes).
+-- Read in order they tell what happened to them, and who's been driving the truck since.
+Story.Notes = {
+	{ by = "Mara", text = "October 3rd. The truck died at the end of the path, just like the man at the gas station said it would. The cabin's warm. Somebody lit the fire for us." },
+	{ by = "Theo", text = "There's a game set out on the table. Cards, a candle, a carved board. Cal says it's somebody's idea of a joke. The front door won't open, so we're playing." },
+	{ by = "Jun", text = "The rooms aren't there until you play them. I put down a hallway and heard it build itself behind the wall. Like bones setting." },
+	{ by = "Mara", text = "He doesn't come in while the candle burns. He waits at the edge of the light and counts. Keep the cards moving. Don't let the clock stand still for him." },
+	{ by = "Theo", text = "The mirror in the sitting room is wrong. The chair by the fire isn't in it. Neither am I." },
+	{ by = "Jun", text = "Scratches in three rooms. I added them up twice. Odd or even, the book says it matters. Everything in this house is counting." },
+	{ by = "Cal", text = "Jun walked through the wrong door at three. He was smiling. The pines just folded around him." },
+	{ by = "Mara", text = "Theo didn't come up from the basement this time. The door opened. He didn't." },
+	{ by = "Cal", text = "The real way out isn't the same room twice. That's the trick of it. Believe the clues, not the room you want." },
+	{ by = "Cal", text = "I got out. The truck started on the first try. I drive this road every night now. He says if I bring him enough of you, he'll let the others go. I'm sorry." },
 }
 
 -- Endings, keyed by the result's ending id.
