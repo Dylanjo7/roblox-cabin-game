@@ -19,7 +19,6 @@ local HandUI = {}
 
 local localPlayer = Players.LocalPlayer
 local panel: Frame
-local drawButton: TextButton
 local cardRow: Frame
 local hand: { Types.Card } = {}
 local myStage: Types.TurnStage? = nil -- current stage while it's my turn, else nil
@@ -93,7 +92,6 @@ local function render()
 			end
 		end)
 	end
-	drawButton.Visible = myStage == "Draw" and not deckEmpty
 	panel.Visible = myStage ~= "Placing" -- keep the board clear while placing
 end
 
@@ -118,25 +116,6 @@ function HandUI.init(gui: ScreenGui)
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Padding = UDim.new(0, 8)
 	layout.Parent = cardRow
-
-	drawButton = Instance.new("TextButton")
-	drawButton.Name = "Draw"
-	drawButton.AnchorPoint = Vector2.new(0.5, 1)
-	drawButton.Position = UDim2.new(0.5, 0, 0, -10)
-	drawButton.Size = UDim2.fromOffset(200, 40)
-	drawButton.BackgroundColor3 = Color3.fromRGB(28, 34, 30)
-	drawButton.TextColor3 = Color3.fromRGB(235, 225, 200)
-	drawButton.Font = Enum.Font.GothamBold
-	drawButton.TextSize = 18
-	drawButton.Text = "Take the top card"
-	drawButton.Visible = false
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 8)
-	corner.Parent = drawButton
-	drawButton.Activated:Connect(function()
-		request("RequestDraw")
-	end)
-	drawButton.Parent = panel
 
 	render()
 end

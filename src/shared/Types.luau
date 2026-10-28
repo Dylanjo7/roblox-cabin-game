@@ -3,7 +3,7 @@
 
 export type Phase = "Lobby" | "Setup" | "TurnLoop" | "Event" | "FinalEscape" | "GameOver"
 
-export type TurnStage = "WaitingStart" | "Draw" | "Play" | "Placing" | "Peeking" | "Event"
+export type TurnStage = "WaitingStart" | "Draw" | "Play" | "Placing" | "Peeking" | "Event" | "Clock" -- Clock: the table pieces are moving between turns
 
 -- One physical card. uid is unique for the run so intents can name an exact card.
 export type Card = {

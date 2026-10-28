@@ -266,16 +266,40 @@ local function fireplace(parent: Instance, at: CFrame)
 	trim(m, "MantelClock", Vector3.new(1.4, 1.2, 0.7), at * CFrame.new(0, 7.2, 0.2), DARK_WOOD)
 end
 
+-- A grandfather clock. It's tagged "TickingClock": every client ticks its second hand, swings
+-- its pendulum and sets its hands to the time on the Candle (src/client/Clocks). The hands are
+-- built pointing at 12 from the centre of the face; the pendulum swings from PivotFromFace.
 local function grandfatherClock(parent: Instance, at: CFrame)
 	local m = group(parent, "GrandfatherClock")
 	box(m, "Case", Vector3.new(2.4, 9, 1.6), at * CFrame.new(0, 4.5, 0), DARK_WOOD)
 	trim(m, "Hood", Vector3.new(2.8, 0.6, 1.9), at * CFrame.new(0, 9.3, 0), DARK_WOOD)
-	trim(m, "Face", Vector3.new(1.8, 1.8, 0.1), at * CFrame.new(0, 7.6, -0.85), LINEN, Enum.Material.SmoothPlastic)
-	trim(m, "HandHour", Vector3.new(0.1, 0.6, 0.05), at * CFrame.new(0.1, 7.75, -0.92) * CFrame.Angles(0, 0, math.rad(-30)), IRON, Enum.Material.Metal)
-	trim(m, "HandMinute", Vector3.new(0.08, 0.8, 0.05), at * CFrame.new(-0.1, 7.85, -0.93) * CFrame.Angles(0, 0, math.rad(20)), IRON, Enum.Material.Metal)
-	trim(m, "Window", Vector3.new(1.4, 3.6, 0.1), at * CFrame.new(0, 4, -0.82), Color3.fromRGB(20, 18, 16), Enum.Material.Glass)
-	trim(m, "Pendulum", Vector3.new(0.12, 2.6, 0.06), at * CFrame.new(0, 4.4, -0.86), BRASS, Enum.Material.Metal)
-	ball(m, "Bob", Vector3.new(0.6, 0.6, 0.1), at * CFrame.new(0, 3, -0.88), BRASS, Enum.Material.Metal)
+	trim(m, "Crown", Vector3.new(2.2, 0.5, 1.7), at * CFrame.new(0, 9.85, 0), DARK_WOOD)
+	local face = trim(m, "Face", Vector3.new(1.8, 1.8, 0.1), at * CFrame.new(0, 7.6, -0.85), LINEN, Enum.Material.SmoothPlastic)
+	-- Hour marks round the face.
+	for i = 0, 11 do
+		local a = i * math.pi / 6
+		local long = i % 3 == 0
+		trim(m, "HourMark", Vector3.new(0.06, if long then 0.18 else 0.1, 0.02), face.CFrame * CFrame.Angles(0, 0, a) * CFrame.new(0, 0.72, -0.06), IRON, Enum.Material.Metal)
+	end
+	local hands = {
+		{ "HandHour", 0.5, 0.09, -0.07, IRON },
+		{ "HandMinute", 0.75, 0.06, -0.085, IRON },
+		{ "HandSecond", 0.78, 0.025, -0.1, Color3.fromRGB(140, 30, 24) },
+	}
+	for _, h in hands do
+		local name, length, width, depth, color = h[1], h[2], h[3], h[4], h[5]
+		-- Pointing up; a short tail past the centre.
+		trim(m, name, Vector3.new(width, length, 0.02), face.CFrame * CFrame.new(0, length / 2 - 0.08, depth), color, Enum.Material.Metal)
+	end
+	ball(m, "Pin", Vector3.new(0.12, 0.12, 0.12), face.CFrame * CFrame.new(0, 0, -0.11), BRASS, Enum.Material.Metal)
+	local glass = trim(m, "Window", Vector3.new(1.4, 3.6, 0.1), at * CFrame.new(0, 4, -0.82), Color3.fromRGB(20, 18, 16), Enum.Material.Glass)
+	glass.Transparency = 0.35
+	local pivotFromFace = Vector3.new(0, -1.9, -0.02)
+	local rod = trim(m, "Pendulum", Vector3.new(0.12, 2.6, 0.06), at * CFrame.new(0, 4.4, -0.87), BRASS, Enum.Material.Metal)
+	rod:SetAttribute("PivotFromFace", pivotFromFace)
+	local bob = ball(m, "Bob", Vector3.new(0.6, 0.6, 0.1), at * CFrame.new(0, 3, -0.89), BRASS, Enum.Material.Metal)
+	bob:SetAttribute("PivotFromFace", pivotFromFace)
+	CollectionService:AddTag(m, "TickingClock")
 end
 
 local function crate(parent: Instance, at: CFrame, size: number)

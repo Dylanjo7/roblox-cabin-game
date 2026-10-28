@@ -7,6 +7,8 @@ local RunService = game:GetService("RunService")
 
 local Types = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Types"))
 
+local Style = require(script.Parent.Style)
+
 local EventUI = {}
 
 local localPlayer = Players.LocalPlayer
@@ -17,38 +19,40 @@ local timer: TextLabel
 local status: TextLabel
 local event: Types.EventPublic? = nil
 
-local function label(name: string, y: number, height: number, size: number, font: Enum.Font): TextLabel
-	local l = Instance.new("TextLabel")
-	l.Name = name
-	l.Position = UDim2.fromOffset(12, y)
-	l.Size = UDim2.new(1, -24, 0, height)
-	l.BackgroundTransparency = 1
-	l.TextColor3 = Color3.fromRGB(255, 236, 228)
-	l.Font = font
-	l.TextSize = size
-	l.TextWrapped = true
-	l.Parent = panel
-	return l
-end
-
 function EventUI.init(gui: ScreenGui)
+	-- No box: the event's name in big red letters across the top, over a band of shadow.
 	panel = Instance.new("Frame")
 	panel.Name = "Event"
 	panel.AnchorPoint = Vector2.new(0.5, 0)
-	panel.Position = UDim2.new(0.5, 0, 0, 220)
-	panel.Size = UDim2.fromOffset(560, 150)
-	panel.BackgroundColor3 = Color3.fromRGB(90, 16, 16)
-	panel.BackgroundTransparency = 0.15
+	panel.Position = UDim2.new(0.5, 0, 0, 96)
+	panel.Size = UDim2.new(0.7, 0, 0, 170)
+	panel.BackgroundColor3 = Color3.new(0, 0, 0)
+	panel.BorderSizePixel = 0
 	panel.Visible = false
 	panel.Parent = gui
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 8)
-	corner.Parent = panel
+	local band = Instance.new("UIGradient")
+	band.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1),
+		NumberSequenceKeypoint.new(0.3, 0.55),
+		NumberSequenceKeypoint.new(0.7, 0.55),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	band.Parent = panel
 
-	title = label("Title", 8, 30, 24, Enum.Font.GothamBlack)
-	body = label("Body", 40, 44, 16, Enum.Font.GothamMedium)
-	timer = label("Timer", 86, 30, 26, Enum.Font.GothamBold)
-	status = label("Status", 118, 24, 15, Enum.Font.GothamMedium)
+	local function place(l: TextLabel, y: number, height: number)
+		l.Position = UDim2.fromOffset(0, y)
+		l.Size = UDim2.new(1, 0, 0, height)
+	end
+	title = Style.text(panel, "Title", Style.Title, 46)
+	title.TextColor3 = Style.Blood
+	place(title, 4, 52)
+	body = Style.text(panel, "Body", Style.Body, 20)
+	place(body, 58, 50)
+	timer = Style.text(panel, "Timer", Style.Body, 34)
+	place(timer, 106, 38)
+	status = Style.text(panel, "Status", Style.Type, 15)
+	status.TextTransparency = 0.2
+	place(status, 144, 22)
 
 	RunService.Heartbeat:Connect(function()
 		local current = event
@@ -60,7 +64,7 @@ function EventUI.init(gui: ScreenGui)
 		else
 			local left = math.max(0, math.ceil(current.endsAt - workspace:GetServerTimeNow()))
 			timer.Text = `{left}s`
-			timer.TextColor3 = if left <= 10 then Color3.fromRGB(255, 120, 100) else Color3.fromRGB(255, 236, 228)
+			timer.TextColor3 = if left <= 10 then Style.Blood else Style.Ink
 		end
 	end)
 end
@@ -72,11 +76,11 @@ function EventUI.setState(state: Types.PublicState)
 	if not current then
 		return
 	end
-	title.Text = `EVENT · {string.upper(current.name)}`
+	title.Text = current.name
 	body.Text = current.text
 	local out = table.find(current.eliminated, localPlayer.UserId) ~= nil
 	if out then
-		status.Text = "You're out. Spectating from the Crawlspace."
+		status.Text = "You're out. The basement door is barred until it's over."
 	elseif current.over then
 		status.Text = "Event over. Back to the table..."
 	else

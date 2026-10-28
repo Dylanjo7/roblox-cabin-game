@@ -28,9 +28,10 @@ local Config = {
 	},
 
 	HollowMan = {
-		EntryStep = 0, -- enters the track at 9:00 PM after the first full round
-		StepsPerRound = 1, -- +30 min per round
-		StepsPerRoundFromMidnight = 2, -- +60 min per round once he is at or past midnight
+		TurnsPerMove = 4, -- he moves once every this many turns, whatever the player count (4 players = once a round; solo = every 4th turn)
+		EntryStep = 0, -- his first move puts him on the track at 9:00 PM
+		StepsPerRound = 1, -- then +30 min per move
+		StepsPerRoundFromMidnight = 2, -- +60 min per move once he is at or past midnight
 		DeckOutExtraSteps = 2, -- one-time +60 min when the deck runs out
 		MinStep = 0, -- Hold the Line can't push him below 9:00 PM
 	},
@@ -194,6 +195,11 @@ local Config = {
 		PlayedCardSlots = 26, -- cards per lap around the ring; later cards stack on top
 		PlayedCardGapDegrees = 30, -- keep this far either side of the stand clear
 		CardFlySeconds = 0.6,
+		-- The pieces ride on sticks from two wheels inside the table; each wheel turns one ratchet
+		-- step at a time (the next turn waits for the Hollow Man's wheel to finish).
+		CandleStepSeconds = 0.5,
+		HollowStepSeconds = 0.7,
+		PieceRaise = 0.35, -- how high the sticks hold the pieces above the ring
 	},
 
 	-- Board camera while placing a room (heights are studs above the table top)
@@ -240,6 +246,12 @@ local Config = {
 		FogColor = Color3.fromRGB(12, 14, 18),
 	},
 
+	-- Everyone's lantern (key 1 to hold it up).
+	Lantern = {
+		Range = 18,
+		Brightness = 1.3,
+	},
+
 	-- The basement under the Crawlspace, where eliminated players wait out an event.
 	Basement = {
 		Depth = 60, -- studs below the cabin floor (clear of the ground)
@@ -275,9 +287,15 @@ local Config = {
 		Ground = Color3.fromRGB(30, 34, 26),
 	},
 
-	-- Dread: how the cabin reacts to the gap between the Candle and the Hollow Man (in clock
-	-- steps). Each list is indexed by dread level: 1 calm, 2 uneasy, 3 near, 4 close, 5 caught.
+	-- Dread. Lists are indexed by level 1..5.
+	-- FogEnd, CreakPerSecond, GlimpseSeconds and WindowGlimpseSeconds follow the gap between the
+	-- Candle and the Hollow Man on the clock (1 calm, 2 uneasy, 3 near, 4 close, 5 caught).
+	-- AmbienceVolume, DroneVolume, HeartbeatVolume, FlickerPerSecond and Tint follow where he
+	-- physically is: SameRoomLevel when he's in your room, NextRoomLevel one room away, else 1.
+	-- Level 1 is normal: set AmbienceVolume[1] to 0 for silence when he's not around.
 	Dread = {
+		SameRoomLevel = 5,
+		NextRoomLevel = 4,
 		UneasyGap = 3, -- 90 min
 		NearGap = 2, -- 60 min
 		CloseGap = 1, -- 30 min
@@ -315,6 +333,7 @@ local Config = {
 		knock = "rbxassetid://9114141162", -- Door Knock 6 (for The Knock)
 		lullaby = "rbxassetid://9047785119", -- Music Box Lullaby (APM), the Music Box clue
 		ratchet = "rbxassetid://9118047781", -- Ratchet Wrench Gear Winding 3: a piece moving on the clock
+		tick = "rbxasset://sounds/clickfast.wav", -- built-in click, pitched down as the clocks' tick (swap for a library tick if you find a better one)
 	} :: { [string]: string },
 }
 

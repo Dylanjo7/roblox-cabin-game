@@ -115,11 +115,10 @@ function HeWalks.start(run: EventRun)
 		start = run.data.startCell
 	end
 
-	local figure = HollowManModel.build()
+	-- An invisible marker; each client draws and animates him on it (HollowManView).
 	local position = centre(start)
 	local facing = Vector3.new(0, 0, -1)
-	figure:PivotTo(CFrame.new(position))
-	figure.Parent = folder
+	local figure = HollowManModel.marker(CFrame.new(position), folder)
 	EventKit.notifyAll(run, "He's inside the cabin. Stay out of his sight...")
 
 	local params = RaycastParams.new()
@@ -175,7 +174,7 @@ function HeWalks.start(run: EventRun)
 					end
 					local caught = exposure[player] >= cfg.CatchSeconds or flatDistance < cfg.GrabDistance
 					if caught and os.clock() > graceUntil then
-						EventKit.sound("caught", figure.PrimaryPart :: BasePart, 0.8)
+						EventKit.sound("caught", figure, 0.8)
 						run.eliminate(player)
 						exposure[player] = 0
 					end
@@ -209,12 +208,12 @@ function HeWalks.start(run: EventRun)
 					facing = to.Unit
 				end
 			end
-			local bob = math.abs(math.sin(os.clock() * 5)) * 0.15
-			figure:PivotTo(CFrame.lookAt(position, position + facing) * CFrame.new(0, bob, 0))
+			figure.CFrame = CFrame.lookAt(position, position + facing)
+			figure:SetAttribute("Chasing", chase ~= nil)
 
 			if os.clock() - lastStep > cfg.StepSeconds then
 				lastStep = os.clock()
-				EventKit.sound("step", figure.PrimaryPart :: BasePart, 0.35)
+				EventKit.sound("step", figure, 0.35)
 			end
 		end
 	end)

@@ -39,6 +39,7 @@ local stage: TurnStage = "WaitingStart"
 local round = 1
 local pending: PendingPlacement? = nil
 local roundEnded = Instance.new("BindableEvent")
+local clockToken = 0 -- cancels a pending start after the table animation (run reset)
 
 -- Fires (finishedRound: number) after every player in the run has taken a turn.
 TurnController.RoundEnded = roundEnded.Event
@@ -107,6 +108,15 @@ function TurnController.removePlayer(player: Player): boolean
 		return true
 	end
 
+	if stage == "Clock" then
+		-- Their turn hadn't started (the table was still moving); the one after them goes next.
+		if activeIndex > #order then
+			activeIndex = 1
+		end
+		StateSync.broadcast()
+		return true
+	end
+
 	-- Point at the player before them, so ending the turn hands it to the next one (and counts
 	-- the round as finished if they were last in the order).
 	activeIndex -= 1
@@ -140,6 +150,7 @@ function TurnController.reset()
 	round = 1
 	stage = "WaitingStart"
 	pending = nil
+	clockToken += 1
 	CardEffects.reset()
 	StateSync.broadcast()
 end
@@ -163,7 +174,7 @@ function TurnController.endTurn()
 		round += 1
 	end
 
-	local status = Clock.resolveTurnEnd(finished ~= nil)
+	local status, waitSeconds = Clock.resolveTurnEnd()
 	if finished then
 		roundEnded:Fire(finished)
 	end
@@ -171,12 +182,28 @@ function TurnController.endTurn()
 		StateSync.broadcast()
 		return
 	end
-	if status == "LastTurn" then
-		for _, p in order do
-			Remotes.notify(p, "The Hollow Man has reached the Candle! Last turn: the Candle must move forward before it ends.")
+	local function continueTurn()
+		if status == "LastTurn" then
+			for _, p in order do
+				Remotes.notify(p, "The Hollow Man has reached the Candle! Last turn: the Candle must move forward before it ends.")
+			end
 		end
+		TurnController.startNextTurn()
 	end
-	TurnController.startNextTurn()
+	if waitSeconds <= 0 then
+		continueTurn()
+		return
+	end
+	-- The Hollow Man is walking his steps on the table; the next turn starts once he's done.
+	stage = "Clock"
+	StateSync.broadcast()
+	clockToken += 1
+	local token = clockToken
+	task.delay(waitSeconds, function()
+		if token == clockToken and stage == "Clock" and GameState.get() == "TurnLoop" then
+			continueTurn()
+		end
+	end)
 end
 
 -- The player must now place this room card somewhere valid; there is no way back to the hand.
@@ -228,6 +255,10 @@ local function onRequestStartTurn(player: Player)
 	end
 	if Table.seatOf(player) == nil then
 		Remotes.notify(player, "Sit at the Parlor table to start your turn.")
+		return
+	end
+	if stage == "Clock" then
+		Remotes.notify(player, "Wait for the Hollow Man to finish moving.")
 		return
 	end
 	if stage ~= "WaitingStart" then

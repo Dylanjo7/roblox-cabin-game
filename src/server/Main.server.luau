@@ -15,6 +15,7 @@ local Basement = require(script.Parent.Basement)
 local CardEffects = require(script.Parent.CardEffects)
 local ClueSigns = require(script.Parent.ClueSigns)
 local Journal = require(script.Parent.Journal)
+local Lanterns = require(script.Parent.Lanterns)
 local Clock = require(script.Parent.Clock)
 local EventRunner = require(script.Parent.EventRunner)
 local FinalEscape = require(script.Parent.Events.FinalEscape)
@@ -80,6 +81,7 @@ Setup.resetCabin()
 Party.init()
 Arrival.init() -- after the Parlor exists: porch, door, and the walk up from the truck
 Basement.init() -- follows the Crawlspace wherever it is placed
+Lanterns.init()
 
 GameState.Changed:Connect(function()
 	StateSync.broadcast()
@@ -91,11 +93,20 @@ GameState.onEnter("Setup", function()
 	Setup.run(pendingPlayers)
 end)
 
-GameState.onEnter("Lobby", function()
+GameState.onEnter("Lobby", function(from)
 	EventRunner.abort()
 	TurnController.reset()
 	-- Out of the chairs, so the next run starts only when people sit down again.
 	Table.standAll()
+	if from == "GameOver" then
+		-- Everyone back inside the Parlor: whoever escaped is outside by the truck (and the front
+		-- door is locked for good), the caught are in the basement.
+		for _, player in Players:GetPlayers() do
+			task.spawn(function()
+				player:LoadCharacter()
+			end)
+		end
+	end
 end)
 
 -- 3:00 AM: the final escape. Win if anyone gets out through the true exit.

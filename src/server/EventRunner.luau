@@ -2,8 +2,9 @@
 -- Runs Event cards. An event starts the moment it's drawn: everyone is stood up from the table,
 -- a timer runs, and the event's module decides who fails. A player who fails wakes up in the
 -- basement under the Crawlspace (see Basement), locked in until the event ends, and every
--- elimination moves the Candle +60 min. When the event ends, everyone goes back to their seat
--- (elimination costs time, not your spot in the run).
+-- elimination moves the Candle +60 min. When the event ends, the survivors go back to their
+-- seats and the basement door opens for the eliminated to walk back up (elimination costs
+-- time, not your spot in the run).
 -- Each event lives in its own module under Events/ and only sees the EventRun it's given.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -86,8 +87,15 @@ local function eliminate(run: EventRun, player: Player)
 	StateSync.broadcast()
 end
 
+-- Everyone who made it goes back to their seat. The eliminated are left in the basement: its
+-- door opens now and they have to climb out and walk back to the table (the next turn can't
+-- start until everyone is seated).
 local function returnToSeats(run: EventRun)
 	for _, player in run.players do
+		if run.eliminated[player] then
+			Remotes.notify(player, "The basement door grinds open. Climb the stairs and get back to the table.")
+			continue
+		end
 		local character, humanoid, root = parts(player)
 		if character and humanoid and root then
 			root.Anchored = false

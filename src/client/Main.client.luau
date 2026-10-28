@@ -1,6 +1,8 @@
 --!strict
--- Client boot: HUD, clock track, hand, board, Peek, events, Altar, Journal, story and dread, input, and listening
--- for server state and messages.
+-- Client boot: HUD, hand, board, Peek, events, Altar, Journal, story and dread, the Hollow Man,
+-- the table's clock pieces, the ticking clocks, rooms rising into place, input, and listening
+-- for server state and messages. (The time is only shown on the table and the clocks, never on
+-- screen.)
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -9,20 +11,22 @@ local Remotes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("R
 local AltarUI = require(script.Parent.AltarUI)
 local Atmosphere = require(script.Parent.Atmosphere)
 local BoardUI = require(script.Parent.BoardUI)
-local ClockUI = require(script.Parent.ClockUI)
+local Clocks = require(script.Parent.Clocks)
 local Cursor = require(script.Parent.Cursor)
 local Cutscene = require(script.Parent.Cutscene)
 local EventUI = require(script.Parent.EventUI)
 local HandUI = require(script.Parent.HandUI)
+local HollowManView = require(script.Parent.HollowManView)
 local Hud = require(script.Parent.Hud)
 local Input = require(script.Parent.Input)
 local JournalUI = require(script.Parent.JournalUI)
 local PeekUI = require(script.Parent.PeekUI)
 local SwapUI = require(script.Parent.SwapUI)
 local Reflections = require(script.Parent.Reflections)
+local RoomRise = require(script.Parent.RoomRise)
+local TablePieces = require(script.Parent.TablePieces)
 
 local gui = Hud.init()
-ClockUI.init(gui)
 HandUI.init(gui)
 BoardUI.init(gui)
 PeekUI.init(gui)
@@ -31,6 +35,10 @@ EventUI.init(gui)
 AltarUI.init(gui)
 JournalUI.init(gui)
 Cutscene.init(gui)
+HollowManView.init()
+TablePieces.init()
+Clocks.init()
+RoomRise.init()
 Atmosphere.init()
 Reflections.init()
 Cursor.init(gui, function(): boolean
@@ -50,7 +58,7 @@ local doorWasClosed: boolean? = nil -- nil until the first state arrives
 
 local function setState(state)
 	Hud.setState(state)
-	ClockUI.setState(state)
+	Clocks.setState(state)
 	EventUI.setState(state)
 	HandUI.setState(state)
 	if state.cabin then

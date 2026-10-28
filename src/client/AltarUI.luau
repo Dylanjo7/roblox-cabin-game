@@ -11,6 +11,7 @@ local Remotes = require(Shared:WaitForChild("Remotes"))
 local Types = require(Shared:WaitForChild("Types"))
 
 local Hud = require(script.Parent.Hud)
+local Style = require(script.Parent.Style)
 
 local CARD = Vector2.new(96, 134)
 
@@ -25,17 +26,8 @@ local canTake = false
 local busy = false
 
 local function button(parent: Instance, text: string, size: UDim2): TextButton
-	local b = Instance.new("TextButton")
-	b.Size = size
-	b.BackgroundColor3 = Color3.fromRGB(64, 52, 40)
-	b.TextColor3 = Color3.fromRGB(235, 225, 200)
-	b.Font = Enum.Font.GothamBold
-	b.TextSize = 14
-	b.Text = text
-	b.Parent = parent
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 6)
-	corner.Parent = b
+	local b = Style.button(parent, text, size)
+	b.TextSize = 16
 	return b
 end
 
@@ -81,7 +73,7 @@ local function render()
 			active.Position = UDim2.fromOffset(0, -18)
 			active.BackgroundTransparency = 1
 			active.TextColor3 = Color3.fromRGB(255, 210, 140)
-			active.Font = Enum.Font.GothamBold
+			active.Font = Enum.Font.Fondamento
 			active.TextSize = 12
 			active.Text = "ACTIVE CLUE"
 			active.Parent = slot
@@ -108,7 +100,7 @@ function AltarUI.init(gui: ScreenGui)
 	panel.AnchorPoint = Vector2.new(0, 1)
 	panel.Position = UDim2.new(0, 16, 1, -60)
 	panel.Size = UDim2.fromOffset(560, CARD.Y + 76)
-	panel.BackgroundColor3 = Color3.fromRGB(18, 20, 18)
+	panel.BackgroundColor3 = Color3.fromRGB(14, 11, 9)
 	panel.BackgroundTransparency = 0.15
 	panel.Visible = false
 	panel.Parent = gui
@@ -121,7 +113,7 @@ function AltarUI.init(gui: ScreenGui)
 	title.Size = UDim2.new(1, -24, 0, 18)
 	title.BackgroundTransparency = 1
 	title.TextColor3 = Color3.fromRGB(235, 225, 200)
-	title.Font = Enum.Font.GothamBold
+	title.Font = Enum.Font.Fondamento
 	title.TextSize = 14
 	title.TextXAlignment = Enum.TextXAlignment.Left
 	title.Text = "The Altar · top card first. Take one back instead of drawing."

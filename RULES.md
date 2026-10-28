@@ -15,8 +15,8 @@ The goal is to survive until 3:00 AM, work out the correct exit from three clues
 All card play happens at one round table in the Parlor, and players must be seated for a turn to start.
 
 - **Cabin map (center):** a model of the cabin. Every Room card played is added here and also built at full size in the world.
-- **Clock track (outer ring):** runs from 9:00 PM to 3:00 AM in 30-minute steps, 12 steps in all. The group shares one piece, the Candle. The Hollow Man's piece also moves on this track.
-- **Card stand:** a stand that faces the active player. It has the draw slot, where the next card waits face down, and the Altar on top, where Clue cards are stacked.
+- **Clock track (outer ring):** runs from 9:00 PM to 3:00 AM in 30-minute steps, 12 steps in all. The group shares one piece, the Candle. The Hollow Man's piece also moves on this track. Each piece stands on a stick from its own wheel inside the table, and the wheel ratchets round one step at a time. The time is shown only here and on the cabin's clocks, never on screen.
+- **Card box:** a small wooden box carved "It is your turn" that sits in front of the active player. The next card sticks out of it face down (take it from there), and the Altar sits on top, where Clue cards are stacked.
 - **Played cards:** stay face up around the table's edge. There's no discard pile, and a card removed by an effect is gone for the run.
 - **Rotation:** after each turn, the outer ring turns so the card stand faces the next player. In solo play it keeps coming back to you.
 
@@ -25,7 +25,7 @@ All card play happens at one round table in the Parlor, and players must be seat
 1. Players meet in a lobby (a ranger station works), set difficulty, then get into a truck together to start the run.
 2. The run begins in the Parlor, the fixed starting room with a door on all four sides.
 3. The server secretly picks the true exit room and its three true clues (see Exit rooms).
-4. The Candle starts at 9:00 PM. The Hollow Man starts off the track and enters at 9:00 PM after the first full round.
+4. The Candle starts at 9:00 PM. The Hollow Man starts off the track and enters at 9:00 PM after the first 4 turns.
 5. The first card played is always the Crawlspace, a one-door room attached to any Parlor doorway. It can't be built from, so the cabin grows from the Parlor's other three doors.
 6. Each player is dealt 3 cards and normal turns begin.
 
@@ -107,7 +107,7 @@ The true exit has to be built before 3:00 AM to escape through it, so holding ex
 
 ## The Hollow Man
 
-The Hollow Man chases the group's Candle on the clock track, not the players themselves. After every full round he moves forward 30 minutes, and from midnight on he moves 60 minutes per round.
+The Hollow Man chases the group's Candle on the clock track, not the players themselves. He moves once every 4 turns, whatever the player count (once round the table with 4 players; every 4th turn solo): 30 minutes, or 60 minutes from midnight on. The next turn waits while his piece moves.
 
 - **Caught:** if his piece reaches or passes the Candle, the group gets one last turn. That turn plays normally, but the Candle has to move forward before it ends.
 - **Lost:** if the last turn ends without the Candle moving, the run is over for everyone.
@@ -130,9 +130,9 @@ An Event card starts the moment it's drawn and pulls every player away from the 
 
 **Elimination**
 
-- A player who fails an event is sent to the Crawlspace to spectate for the rest of the event.
+- A player who fails an event wakes up in the basement under the Crawlspace. Its door is barred until the event ends.
 - Every eliminated player adds 60 minutes to the clock. Two players caught in one event means +2 hours.
-- Eliminated players return to their seat when the event ends. Elimination costs time, not your spot in the run.
+- When the event ends the basement door opens, and eliminated players climb out and walk back to the table. The next turn waits until everyone is seated. Elimination costs time, not your spot in the run.
 
 ## 3 AM and the final escape
 

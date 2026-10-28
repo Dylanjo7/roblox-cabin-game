@@ -67,7 +67,7 @@ function Cutscene.init(gui: ScreenGui)
 	line.Position = UDim2.fromScale(0.5, 0.52)
 	line.Size = UDim2.new(0.6, 0, 0, 140)
 	line.ZIndex = 51
-	hint = text("Hint", overlay, Enum.Font.Gotham, 14)
+	hint = text("Hint", overlay, Enum.Font.Fondamento, 14)
 	hint.Position = UDim2.new(0.5, 0, 1, -40)
 	hint.Size = UDim2.new(0.5, 0, 0, 20)
 	hint.ZIndex = 51

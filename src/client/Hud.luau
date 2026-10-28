@@ -1,48 +1,52 @@
 --!strict
--- Owns the screen GUI: status line at the top (clock, round, what to do next) and short toasts.
+-- Owns the screen GUI: one line of what to do next, the turn order in multiplayer, and short
+-- messages that fade in and out. No clock: the time is only on the table.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local CardData = require(Shared:WaitForChild("CardData"))
 local Config = require(Shared:WaitForChild("Config"))
 local Types = require(Shared:WaitForChild("Types"))
 
+local Style = require(script.Parent.Style)
+
 local Hud = {}
 
 local localPlayer = Players.LocalPlayer
 local screen: ScreenGui
 local statusLabel: TextLabel
+local orderLabel: TextLabel
 local toastLabel: TextLabel
 local toastToken = 0
-
-local function makeLabel(name: string, y: number, height: number, parent: Instance): TextLabel
-	local label = Instance.new("TextLabel")
-	label.Name = name
-	label.AnchorPoint = Vector2.new(0.5, 0)
-	label.Position = UDim2.new(0.5, 0, 0, y)
-	label.Size = UDim2.new(0, 720, 0, height)
-	label.BackgroundColor3 = Color3.fromRGB(18, 20, 18)
-	label.BackgroundTransparency = 0.3
-	label.TextColor3 = Color3.fromRGB(230, 222, 200)
-	label.Font = Enum.Font.GothamMedium
-	label.TextSize = 18
-	label.TextWrapped = true
-	label.Parent = parent
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 6)
-	corner.Parent = label
-	return label
-end
 
 function Hud.init(): ScreenGui
 	screen = Instance.new("ScreenGui")
 	screen.Name = "HollowPinesHud"
 	screen.ResetOnSpawn = false
-	statusLabel = makeLabel("Status", 8, 34, screen)
-	toastLabel = makeLabel("Toast", 48, 30, screen)
-	toastLabel.Visible = false
+	screen.IgnoreGuiInset = true
+	Style.vignette(screen)
+
+	-- What to do next: a single line of ink near the top, no box.
+	statusLabel = Style.text(screen, "Status", Style.Body, 22)
+	statusLabel.AnchorPoint = Vector2.new(0.5, 0)
+	statusLabel.Position = UDim2.new(0.5, 0, 0, 46)
+	statusLabel.Size = UDim2.new(0.6, 0, 0, 30)
+	-- Turn order (multiplayer only), small and faint under it.
+	orderLabel = Style.text(screen, "Order", Style.Type, 14)
+	orderLabel.AnchorPoint = Vector2.new(0.5, 0)
+	orderLabel.Position = UDim2.new(0.5, 0, 0, 76)
+	orderLabel.Size = UDim2.new(0.6, 0, 0, 18)
+	orderLabel.TextTransparency = 0.3
+	-- Messages fade in a third of the way down and fade away.
+	toastLabel = Style.text(screen, "Toast", Style.Body, 24)
+	toastLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+	toastLabel.Position = UDim2.fromScale(0.5, 0.3)
+	toastLabel.Size = UDim2.new(0.55, 0, 0, 64)
+	toastLabel.TextTransparency = 1
+	toastLabel.TextStrokeTransparency = 1
 	screen.Parent = localPlayer:WaitForChild("PlayerGui")
 	return screen
 end
@@ -53,7 +57,7 @@ local function instruction(state: Types.PublicState): string
 		if state.arrival and not state.arrival.doorClosed then
 			return "Walk up the path to the cabin. The door is open."
 		end
-		return "HOLLOW PINES  ·  Sit at the Parlor table to begin. The game starts when everyone is seated."
+		return "Sit at the table. It begins when everyone is seated."
 	elseif state.phase == "Setup" then
 		if turn and turn.placingId then
 			return "Setup · Place the Crawlspace on one of the Parlor's doors."
@@ -62,6 +66,9 @@ local function instruction(state: Types.PublicState): string
 	elseif state.phase == "TurnLoop" then
 		if not turn or not turn.activeUserId then
 			return ""
+		end
+		if turn.stage == "Clock" then
+			return "The Hollow Man takes his steps..."
 		end
 		local standing = if turn.stage == "WaitingStart" and turn.unseated and #turn.unseated > 0
 			then `Waiting for {table.concat(turn.unseated, ", ")} to sit down.`
@@ -76,9 +83,9 @@ local function instruction(state: Types.PublicState): string
 			if state.deckCount == 0 then
 				return "Deck empty: take a clue off the ALTAR, or play a card from your hand."
 			elseif altar > 0 then
-				return "Take the top card, or take a clue back off the ALTAR (bottom left)."
+				return "Take the card sticking out of the box, or take a clue back off the Altar (bottom left)."
 			end
-			return "Take the top card (button, or click the card back on the stand)."
+			return "Take the card sticking out of the box in front of you."
 		elseif turn.stage == "Play" then
 			return "Pick a card to play. Once picked, you're committed."
 		elseif turn.stage == "Placing" and turn.placingId then
@@ -87,7 +94,7 @@ local function instruction(state: Types.PublicState): string
 			return "Peek: put the top cards back in any order."
 		end
 	elseif state.phase == "Event" then
-		return "Event in progress!"
+		return ""
 	elseif state.phase == "GameOver" then
 		local result = state.result
 		if result then
@@ -99,34 +106,29 @@ local function instruction(state: Types.PublicState): string
 end
 
 function Hud.setState(state: Types.PublicState)
-	local parts = {}
-	if state.phase == "TurnLoop" and state.turn then
-		table.insert(parts, `Round {state.turn.round}`)
-		local order = state.turn.order
-		if order and #order > 1 then
-			-- Turn order with the active player in brackets.
-			local names = {}
-			for _, name in order do
-				table.insert(names, if name == state.turn.activeName then `[{name}]` else name)
-			end
-			table.insert(parts, table.concat(names, " > "))
+	statusLabel.Text = instruction(state)
+	local order = state.turn and state.turn.order
+	if state.phase == "TurnLoop" and order and #order > 1 then
+		-- Turn order with the active player in brackets.
+		local names = {}
+		for _, name in order do
+			table.insert(names, if state.turn and name == state.turn.activeName then `[{name}]` else name)
 		end
+		orderLabel.Text = table.concat(names, "  ·  ")
+	else
+		orderLabel.Text = ""
 	end
-	if state.deckCount and state.phase ~= "Lobby" then
-		table.insert(parts, `Deck {state.deckCount}`)
-	end
-	table.insert(parts, instruction(state))
-	statusLabel.Text = table.concat(parts, "  ·  ")
 end
 
 function Hud.toast(text: string)
 	toastToken += 1
 	local token = toastToken
 	toastLabel.Text = text
-	toastLabel.Visible = true
+	local fadeIn = TweenInfo.new(0.25)
+	TweenService:Create(toastLabel, fadeIn, { TextTransparency = 0, TextStrokeTransparency = 0.35 }):Play()
 	task.delay(Config.UI.ToastSeconds, function()
 		if toastToken == token then
-			toastLabel.Visible = false
+			TweenService:Create(toastLabel, TweenInfo.new(0.8), { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
 		end
 	end)
 end

@@ -7,6 +7,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local CardData = require(Shared:WaitForChild("CardData"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
 local Types = require(Shared:WaitForChild("Types"))
+local Style = require(script.Parent.Style)
 
 local PeekUI = {}
 
@@ -15,19 +16,7 @@ local list: Frame
 local order: { Types.Card } = {}
 
 local function button(text: string, size: UDim2, parent: Instance, onClick: () -> ()): TextButton
-	local b = Instance.new("TextButton")
-	b.Size = size
-	b.BackgroundColor3 = Color3.fromRGB(64, 52, 40)
-	b.TextColor3 = Color3.fromRGB(235, 225, 200)
-	b.Font = Enum.Font.GothamBold
-	b.TextSize = 16
-	b.Text = text
-	b.Activated:Connect(onClick)
-	b.Parent = parent
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 6)
-	corner.Parent = b
-	return b
+	return Style.button(parent, text, size, onClick)
 end
 
 local function move(from: number, to: number)
@@ -54,7 +43,7 @@ local function render()
 		label.Size = UDim2.new(1, -84, 1, 0)
 		label.BackgroundTransparency = 1
 		label.TextColor3 = Color3.fromRGB(235, 225, 200)
-		label.Font = Enum.Font.GothamMedium
+		label.Font = Enum.Font.Fondamento
 		label.TextSize = 16
 		label.TextXAlignment = Enum.TextXAlignment.Left
 		local def = CardData.get(card.id)
@@ -80,7 +69,7 @@ function PeekUI.init(gui: ScreenGui)
 	frame.AnchorPoint = Vector2.new(0.5, 0.5)
 	frame.Position = UDim2.fromScale(0.5, 0.55)
 	frame.Size = UDim2.fromOffset(380, 230)
-	frame.BackgroundColor3 = Color3.fromRGB(18, 20, 18)
+	frame.BackgroundColor3 = Color3.fromRGB(14, 11, 9)
 	frame.BackgroundTransparency = 0.15
 	frame.Visible = false
 	frame.Parent = gui
@@ -93,7 +82,7 @@ function PeekUI.init(gui: ScreenGui)
 	title.Size = UDim2.new(1, -24, 0, 24)
 	title.BackgroundTransparency = 1
 	title.TextColor3 = Color3.fromRGB(235, 225, 200)
-	title.Font = Enum.Font.GothamBold
+	title.Font = Enum.Font.Fondamento
 	title.TextSize = 16
 	title.Text = "Peek · top of the deck first. Reorder, then confirm."
 	title.TextWrapped = true

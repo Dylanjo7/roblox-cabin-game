@@ -1,8 +1,12 @@
 --!strict
--- Dread. The Hollow Man on the clock is the monster closing in, and the cabin reacts to how close
--- he is to the Candle: fog thickens, the ambience swells, the lights flicker, you start catching
--- glimpses of him in dark doorways, and when he catches the Candle he stands at the Parlor door
--- watching the table. Each time he moves on the clock you hear his steps.
+-- Dread, in two parts.
+-- How close he is to the Candle on the clock: fog thickens, the house creaks more, and you start
+-- catching glimpses of him in dark doorways and out among the pines. When he catches the Candle
+-- he stands inside the front door, watching the table. Each step his piece takes on the table
+-- lands with a thud and a jolt.
+-- Where he physically is: only when he's in your room or the next one do the lights flicker,
+-- the drone and heartbeat come in and the picture goes red. The moment he's gone it all fades
+-- back to normal.
 -- Everything here is local to this client and purely cosmetic; it only reads public state.
 
 local CollectionService = game:GetService("CollectionService")
@@ -14,26 +18,28 @@ local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
-local HollowManModel = require(Shared:WaitForChild("HollowManModel"))
 local RoomShapes = require(Shared:WaitForChild("RoomShapes"))
 local Story = require(Shared:WaitForChild("Story"))
 local Types = require(Shared:WaitForChild("Types"))
 
 local Audio = require(script.Parent.Audio)
 local Cutscene = require(script.Parent.Cutscene)
+local HollowManView = require(script.Parent.HollowManView)
+local TablePieces = require(script.Parent.TablePieces)
 
 local Atmosphere = {}
 
 local localPlayer = Players.LocalPlayer
 local dread = Config.Dread
-local level = 1
+local level = 1 -- from the clock gap: fog, creaks, glimpses
+local presence = 1 -- from where he physically is: flicker, drone, heartbeat, tint
 local lastHollow: number? = nil
 local lastLastTurn = false
 local lastEventId: string? = nil
 local phase: Types.Phase = "Lobby"
 local cabin: { Types.CellPublic } = {}
 local tint: ColorCorrectionEffect
-local doorFigure: Model? = nil
+local doorFigure: HollowManView.Handle? = nil
 local rng = Random.new()
 
 local function levelFor(state: Types.PublicState): number
@@ -67,14 +73,38 @@ end
 
 local function applyLevel()
 	TweenService:Create(Lighting, TweenInfo.new(3), { FogEnd = dread.FogEnd[level], FogStart = 0 }):Play()
-	local strength = dread.Tint[level]
-	TweenService:Create(tint, TweenInfo.new(2), {
+end
+
+local function applyPresence()
+	local strength = dread.Tint[presence]
+	local fade = if presence == 1 then 1.5 else 0.6 -- comes in fast, fades out a little slower
+	TweenService:Create(tint, TweenInfo.new(fade), {
 		TintColor = Color3.new(1, 1 - strength * 0.6, 1 - strength * 0.7),
 		Saturation = -0.15 - strength * 0.4,
 	}):Play()
-	Audio.loopVolume("ambience", dread.AmbienceVolume[level])
-	Audio.loopVolume("drone", dread.DroneVolume[level])
-	Audio.loopVolume("heartbeat", dread.HeartbeatVolume[level])
+	Audio.loopVolume("ambience", dread.AmbienceVolume[presence], fade)
+	Audio.loopVolume("drone", dread.DroneVolume[presence], fade)
+	Audio.loopVolume("heartbeat", dread.HeartbeatVolume[presence], fade)
+end
+
+-- How near he really is: 5 in your room, 4 in a room next to it (one cell away), else 1.
+local function presenceLevel(): number
+	local here = root()
+	if not here then
+		return 1
+	end
+	local x, z = RoomShapes.cellAt(here.Position)
+	local best = 1
+	for _, at in HollowManView.positions() do
+		local hx, hz = RoomShapes.cellAt(at)
+		local d = math.abs(hx - x) + math.abs(hz - z)
+		if d == 0 then
+			return dread.SameRoomLevel
+		elseif d == 1 then
+			best = dread.NextRoomLevel
+		end
+	end
+	return best
 end
 
 -- Lights near the player cut out and stutter back.
@@ -126,18 +156,6 @@ local function shake()
 	end)
 end
 
-local function footsteps(count: number)
-	task.spawn(function()
-		for i = 1, count do
-			Audio.play("step", 0.5, nil, 0.8 + rng:NextNumber(0, 0.1))
-			shake()
-			if i < count then
-				task.wait(0.7)
-			end
-		end
-	end)
-end
-
 -- A brief glimpse of him standing in a dark doorway some distance away, facing you.
 local function glimpse()
 	local here = root()
@@ -162,14 +180,11 @@ local function glimpse()
 	end
 	local doorway = candidates[rng:NextInteger(1, #candidates)]
 	local floor = doorway.Position - Vector3.new(0, doorway.Size.Y / 2, 0)
-	local figure = HollowManModel.build()
-	-- The model's front is -Z, which lookAt points at you.
-	figure:PivotTo(CFrame.lookAt(floor, Vector3.new(here.Position.X, floor.Y, here.Position.Z)))
-	figure.Parent = workspace
-	Audio.play("whisper", 0.6, figure.PrimaryPart)
-	task.delay(dread.GlimpseShowSeconds, function()
-		figure:Destroy()
-	end)
+	-- The model's front is -Z, which lookAt points at you. A glimpse isn't him being here, so
+	-- it doesn't set the lights off.
+	local figure = HollowManView.spawnLocal(CFrame.lookAt(floor, Vector3.new(here.Position.X, floor.Y, here.Position.Z)), true, false)
+	Audio.play("whisper", 0.6, doorway)
+	task.delay(dread.GlimpseShowSeconds, figure.destroy)
 end
 
 -- Through a window you're facing: him, standing still out among the pines, watching. Gone a
@@ -204,12 +219,8 @@ local function windowGlimpse()
 	if built[`{x},{z}`] then
 		return -- that's inside another room, not out in the trees
 	end
-	local figure = HollowManModel.build()
-	figure:PivotTo(CFrame.lookAt(spot, Vector3.new(glass.Position.X, floorY, glass.Position.Z)))
-	figure.Parent = workspace
-	task.delay(dread.WindowGlimpseShowSeconds, function()
-		figure:Destroy()
-	end)
+	local figure = HollowManView.spawnLocal(CFrame.lookAt(spot, Vector3.new(glass.Position.X, floorY, glass.Position.Z)), true, false)
+	task.delay(dread.WindowGlimpseShowSeconds, figure.destroy)
 end
 
 -- Frost clue: in a room whose windows have iced over (room attribute Frost), your breath fogs.
@@ -254,7 +265,7 @@ local function updateDoorFigure()
 	local want = level == 5 and phase == "TurnLoop"
 	if not want then
 		if doorFigure then
-			doorFigure:Destroy()
+			doorFigure.destroy()
 			doorFigure = nil
 		end
 		return
@@ -262,11 +273,9 @@ local function updateDoorFigure()
 	if doorFigure then
 		return
 	end
-	local figure = HollowManModel.build()
-	-- Just inside the front door; the model's front is -Z, which faces the table.
-	figure:PivotTo(RoomShapes.frontDoorInside())
-	figure.Parent = workspace
-	doorFigure = figure
+	-- Just inside the front door, facing the table and watching you. He's really here: the
+	-- Parlor's lights stutter while he stands there.
+	doorFigure = HollowManView.spawnLocal(RoomShapes.frontDoorInside(), true, true)
 end
 
 local function onClockChange(state: Types.PublicState)
@@ -277,16 +286,15 @@ local function onClockChange(state: Types.PublicState)
 		return
 	end
 	local hollow = clock.hollow
+	-- (His steps are heard as his piece lands each one on the table: TablePieces.HollowStepped.)
 	if hollow ~= nil and lastHollow == nil then
 		Cutscene.beat(Story.Beats.enters)
-		footsteps(2)
 	elseif hollow ~= nil and lastHollow ~= nil and hollow > lastHollow then
 		if hollow >= Config.Clock.MidnightStep and lastHollow < Config.Clock.MidnightStep then
 			Cutscene.beat(Story.Beats.midnight)
 		else
 			Cutscene.beat(Story.Beats.moves)
 		end
-		footsteps(hollow - lastHollow)
 	elseif hollow ~= nil and lastHollow ~= nil and hollow < lastHollow then
 		Cutscene.beat(Story.Beats.pushedBack)
 	end
@@ -306,8 +314,6 @@ local function onEventChange(state: Types.PublicState)
 	end
 	if lastEventId == "rising_water" then
 		Audio.loopVolume("flood", 0, 1.5)
-	elseif lastEventId == "he_walks" then
-		applyLevel() -- back to the dread the clock calls for
 	end
 	if id == "fuse_box" then
 		Audio.play("flicker", 0.7)
@@ -315,10 +321,7 @@ local function onEventChange(state: Types.PublicState)
 	elseif id == "rising_water" then
 		Audio.loopVolume("flood", 0.5, 4)
 	elseif id == "he_walks" then
-		Audio.play("caught", 0.6)
-		Audio.loopVolume("drone", 0.5, 2)
-		Audio.loopVolume("heartbeat", 0.6, 2)
-		TweenService:Create(Lighting, TweenInfo.new(2), { FogEnd = dread.FogEnd[4] }):Play()
+		Audio.play("caught", 0.6) -- the drone and heartbeat come only when he's near you
 	end -- The Knock and Lockdown play their sounds from the world (server side).
 	lastEventId = id
 end
@@ -342,16 +345,40 @@ function Atmosphere.init()
 	tint.Contrast = 0.08
 	tint.Parent = Lighting
 	Lighting.FogColor = Config.Mood.FogColor
+	-- A soft bloom so lamps, embers and his eyes glow.
+	local bloom = Instance.new("BloomEffect")
+	bloom.Name = "CabinBloom"
+	bloom.Intensity = 0.7
+	bloom.Size = 28
+	bloom.Threshold = 1.4
+	bloom.Parent = Lighting
 	applyLevel()
+	applyPresence()
+
+	-- Each step his piece lands on the table: a heavy thud and a jolt.
+	TablePieces.HollowStepped:Connect(function()
+		Audio.play("step", 0.5, nil, 0.8 + rng:NextNumber(0, 0.1))
+		shake()
+	end)
 
 	local glimpseClock = 0
 	local windowClock = 0
 	local breathClock = 0
+	local presenceClock = 0
 	RunService.Heartbeat:Connect(function(dt: number)
 		breathClock += dt
 		if breathClock > 0.5 then
 			breathClock = 0
 			updateBreath()
+		end
+		presenceClock += dt
+		if presenceClock > 0.2 then
+			presenceClock = 0
+			local now = presenceLevel()
+			if now ~= presence then
+				presence = now
+				applyPresence()
+			end
 		end
 		local windowEvery = dread.WindowGlimpseSeconds[level]
 		if windowEvery > 0 and phase == "TurnLoop" then
@@ -361,7 +388,7 @@ function Atmosphere.init()
 				windowGlimpse()
 			end
 		end
-		if rng:NextNumber() < dread.FlickerPerSecond[level] * dt then
+		if rng:NextNumber() < dread.FlickerPerSecond[presence] * dt then
 			flicker()
 		end
 		if rng:NextNumber() < dread.CreakPerSecond[level] * dt then

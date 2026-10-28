@@ -11,7 +11,7 @@ local TweenService = game:GetService("TweenService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local CardFace = require(Shared:WaitForChild("CardFace"))
 local Config = require(Shared:WaitForChild("Config"))
-local HollowManModel = require(Shared:WaitForChild("HollowManModel"))
+local ClockTrack = require(Shared:WaitForChild("ClockTrack"))
 
 local WOOD = Color3.fromRGB(92, 64, 44)
 local DARK_WOOD = Color3.fromRGB(52, 36, 26)
@@ -129,13 +129,7 @@ function Table.seatOf(player: Player): number?
 	return nil
 end
 
--- Ring-local CFrame of a clock-track position, on top of the ring. The 13 marks spread over an
--- arc centred on the side facing the active player. Step -1 is "off the track".
-local function trackLocal(step: number, radius: number): CFrame
-	local arc = math.rad(Config.Table.TrackArcDegrees)
-	local angle = -arc / 2 + step * arc / Config.Clock.Steps
-	return CFrame.Angles(0, angle, 0) * CFrame.new(0, Config.Table.TopHeight, radius)
-end
+local trackLocal = ClockTrack.localCFrame
 
 -- Ring-local CFrame of the i-th played card (0-based). Cards go round the ring, skipping the
 -- stand; after a full lap they stack on top of the earlier ones.
@@ -148,41 +142,11 @@ local function playedSlotLocal(index: number): CFrame
 	return CFrame.Angles(0, angle, 0) * CFrame.new(0, cfg.TopHeight + CARD_SIZE.Y / 2 + lap * 0.06, cfg.PlayedCardRadius)
 end
 
-local candlePiece: Model
-local hollowPiece: Model
-
-local lastCandle: number? = nil
-local lastHollow: number? = nil
-
--- A mechanical ratchet-and-gears click from a piece as it steps along the clock.
-local function clank(piece: Model)
-	local at = piece.PrimaryPart
-	if not at then
-		return
-	end
-	local sound = Instance.new("Sound")
-	sound.SoundId = Config.Sounds.ratchet or ""
-	sound.Volume = 0.7
-	sound.RollOffMaxDistance = 60
-	sound.Parent = at
-	sound.Ended:Once(function()
-		sound:Destroy()
-	end)
-	sound:Play()
-end
-
--- Move the Candle and Hollow Man pieces (hollow nil = off the track, parked before 9:00 PM).
+-- The Candle and Hollow Man pieces are drawn and animated by each client (TablePieces): the
+-- server only publishes where they are, as attributes on the ring.
 function Table.setClock(candle: number, hollow: number?)
-	local pivot = ring:GetPivot()
-	candlePiece:PivotTo(pivot * trackLocal(candle, Config.Table.CandleTrackRadius))
-	hollowPiece:PivotTo(pivot * trackLocal(hollow or -1, Config.Table.HollowTrackRadius))
-	if lastCandle ~= nil and candle ~= lastCandle then
-		clank(candlePiece)
-	end
-	if lastCandle ~= nil and hollow ~= lastHollow then
-		clank(hollowPiece)
-	end
-	lastCandle, lastHollow = candle, hollow
+	ring:SetAttribute("CandleStep", candle)
+	ring:SetAttribute("HollowStep", hollow or -1)
 end
 
 -- Text engraved flat on the ring, readable from outside the table (its top faces the centre).
@@ -240,48 +204,6 @@ local function buildTrack(model: Model, origin: CFrame)
 	end
 	-- Carved into the rim, in the gap behind the stand.
 	engrave(model, "Carving", "PLAY UNTIL THREE", Vector2.new(4.2, 0.6), origin * CFrame.Angles(0, math.pi, 0) * CFrame.new(0, cfg.TopHeight + 0.03, cfg.MarkRadius), Color3.fromRGB(180, 150, 110), Enum.Font.Fondamento)
-
-	-- The Candle: a brass dish, a dripping candle and its flame.
-	candlePiece = Instance.new("Model")
-	candlePiece.Name = "Candle"
-	local dish = makeCylinder("Dish", 0.36, 0.08, origin * CFrame.new(0, 0.04, 0), BRASS, candlePiece)
-	dish.Material = Enum.Material.Metal
-	dish.CanCollide = false
-	makePart("DishHandle", Vector3.new(0.08, 0.06, 0.25), origin * CFrame.new(0.4, 0.06, 0), BRASS, candlePiece).CanCollide = false
-	local wax = makeCylinder("Wax", 0.15, 0.75, origin * CFrame.new(0, 0.45, 0), Color3.fromRGB(236, 226, 196), candlePiece)
-	wax.Material = Enum.Material.SmoothPlastic
-	wax.CanCollide = false
-	for i, a in { 0.4, 2.3, 4.1 } do
-		makePart("Drip", Vector3.new(0.06, 0.18 + i * 0.06, 0.06), origin * CFrame.Angles(0, a, 0) * CFrame.new(0, 0.7 - i * 0.03, 0.15), Color3.fromRGB(236, 226, 196), candlePiece).CanCollide = false
-	end
-	makePart("Wick", Vector3.new(0.03, 0.08, 0.03), origin * CFrame.new(0, 0.86, 0), Color3.fromRGB(20, 16, 12), candlePiece).CanCollide = false
-	local flame = makePart("Flame", Vector3.new(0.12, 0.22, 0.12), origin * CFrame.new(0, 0.99, 0), Color3.fromRGB(255, 170, 60), candlePiece)
-	flame.Shape = Enum.PartType.Ball
-	flame.Material = Enum.Material.Neon
-	flame.CanCollide = false
-	local light = Instance.new("PointLight")
-	light.Color = Color3.fromRGB(255, 180, 90)
-	light.Range = 7
-	light.Brightness = 1.6
-	light.Parent = flame
-	candlePiece.PrimaryPart = dish
-	candlePiece.WorldPivot = origin
-	candlePiece.Parent = model
-
-	-- The Hollow Man's piece: the same figure that walks the cabin, in miniature, on a base.
-	hollowPiece = HollowManModel.build()
-	hollowPiece.Name = "HollowManPiece"
-	hollowPiece:ScaleTo(cfg.FigurineScale)
-	local base = makeCylinder("Base", 0.3, 0.08, CFrame.new(0, 0.04, 0), Color3.fromRGB(20, 18, 18), hollowPiece)
-	base.Material = Enum.Material.Metal
-	base.CanCollide = false
-	for _, p in hollowPiece:GetDescendants() do
-		if p:IsA("BasePart") then
-			p.CastShadow = false
-		end
-	end
-	hollowPiece:PivotTo(origin)
-	hollowPiece.Parent = model
 end
 
 -- Draw a card design (CardFace) onto one face of a part.
@@ -299,18 +221,51 @@ local function cardGui(p: BasePart, face: Enum.NormalId, cardId: string?)
 	gui.Parent = p
 end
 
--- The card stand: a low, tilted holder right in front of the active seat. The face-down draw
--- slot is on its face and the Altar shelf is on top.
+-- The card box: a small dark wooden box at the edge of the ring, right in front of the active
+-- seat (the ring turns it to whoever's turn it is). "It is your turn" is carved on its front in
+-- a crooked hand, the next card sticks out of a slot underneath towards you (click it to take
+-- it), and the Altar's clue cards stand in a tilted rack on top, the active one facing you.
+-- In the box's frame the player is towards -Z.
 local function buildStand(model: Model, origin: CFrame)
 	local cfg = Config.Table
-	-- Faces outward (+Z), towards the seat the ring is turned to.
 	local base = origin * CFrame.new(0, cfg.TopHeight, cfg.StandRadius) * CFrame.Angles(0, math.pi, 0)
-	makePart("StandBase", Vector3.new(2.6, 0.16, 0.9), base * CFrame.new(0, 0.08, 0), DARK_WOOD, model)
-	local faceCf = base * CFrame.new(0, 0.6, 0.15) * CFrame.Angles(math.rad(35), 0, 0)
-	makePart("StandFace", Vector3.new(2.6, 1.2, 0.12), faceCf, DARK_WOOD, model)
+	local w, h, d = 2.3, 0.85, 1.0
+	local zc = 0.1 -- box centre: its back stays clear of the map disk
+	local body = makePart("CardBox", Vector3.new(w, h, d), base * CFrame.new(0, 0.12 + h / 2, zc), DARK_WOOD, model)
+	body.Material = Enum.Material.WoodPlanks
+	-- A plinth it sits on (the slot is the gap between the two) and a moulding round the lid.
+	makePart("Plinth", Vector3.new(w + 0.12, 0.1, d + 0.12), base * CFrame.new(0, 0.05, zc), DARK_WOOD, model)
+	makePart("Lid", Vector3.new(w + 0.1, 0.08, d + 0.1), body.CFrame * CFrame.new(0, h / 2 + 0.04, 0), WOOD, model)
+	for _, x in { -1, 1 } do
+		for _, y in { -1, 1 } do
+			local bracket = makePart("Bracket", Vector3.new(0.14, 0.14, 0.03), body.CFrame * CFrame.new(x * (w / 2 - 0.1), y * (h / 2 - 0.1), -d / 2 - 0.015), Color3.fromRGB(60, 56, 50), model)
+			bracket.Material = Enum.Material.Metal
+		end
+	end
 
-	drawSlot = makePart("DrawSlot", Vector3.new(CARD_SIZE.X, CARD_SIZE.Z, 0.06), faceCf * CFrame.new(0, -0.02, -0.09), CARD_BACK, model)
-	cardGui(drawSlot, Enum.NormalId.Front, nil)
+	-- The carved plaque.
+	local plaque = makePart("Plaque", Vector3.new(w - 0.4, 0.42, 0.03), body.CFrame * CFrame.new(0, 0.04, -d / 2 - 0.015), Color3.fromRGB(40, 28, 20), model)
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Front
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = 140
+	gui.LightInfluence = 0.6
+	local carved = Instance.new("TextLabel")
+	carved.Size = UDim2.fromScale(1, 1)
+	carved.BackgroundTransparency = 1
+	carved.TextScaled = true
+	carved.Font = Enum.Font.Creepster
+	carved.TextColor3 = Color3.fromRGB(214, 196, 160)
+	carved.TextStrokeColor3 = Color3.fromRGB(16, 10, 8)
+	carved.TextStrokeTransparency = 0.3
+	carved.Text = "It is your turn"
+	carved.Parent = gui
+	gui.Parent = plaque
+
+	-- The next card, face down, sticking half out of the slot towards you.
+	drawSlot = makePart("DrawSlot", CARD_SIZE, base * CFrame.new(0, 0.12, zc - d / 2 - CARD_SIZE.Z / 2 + 0.3) * CFrame.Angles(math.rad(-4), 0, 0), CARD_BACK, model)
+	cardGui(drawSlot, Enum.NormalId.Top, nil)
+	cardGui(drawSlot, Enum.NormalId.Bottom, nil)
 	local click = Instance.new("ClickDetector")
 	click.MaxActivationDistance = cfg.SeatRadius + 3
 	click.MouseClick:Connect(function(player: Player)
@@ -318,9 +273,10 @@ local function buildStand(model: Model, origin: CFrame)
 	end)
 	click.Parent = drawSlot
 
-	-- The Altar: a flat tray on top of the stand where the Clue cards stack, top (active) card up.
-	altarTray = makePart("Altar", Vector3.new(2.6, 0.15, 1.2), base * CFrame.new(0, 1.25, 0.6), WOOD, model)
+	-- The Altar: a rack on the lid, tilted towards you, where the Clue cards stack.
+	altarTray = makePart("Altar", Vector3.new(w - 0.2, 0.12, d - 0.1), body.CFrame * CFrame.new(0, h / 2 + 0.2, 0.05) * CFrame.Angles(math.rad(-25), 0, 0), WOOD, model)
 	addLabel(altarTray, "ALTAR", Enum.NormalId.Front, 100)
+	makePart("AltarLip", Vector3.new(w - 0.2, 0.12, 0.06), altarTray.CFrame * CFrame.new(0, 0.1, -(d - 0.1) / 2), WOOD, model)
 	altarStack = Instance.new("Folder")
 	altarStack.Name = "AltarStack"
 	altarStack.Parent = model
@@ -398,7 +354,7 @@ end
 
 -- A face-down card lifts out of the draw slot (or a clue off the Altar) and flies to the player.
 function Table.animateDraw(player: Player, fromAltar: boolean?)
-	local start = if fromAltar then altarSlot(#altarStack:GetChildren() + 1) else drawSlot.CFrame * CFrame.Angles(math.rad(-90), 0, 0)
+	local start = if fromAltar then altarSlot(#altarStack:GetChildren() + 1) else drawSlot.CFrame
 	local card = makeCard("DrawnCard", start, nil, workspace)
 	flyCard(card, start, function()
 		return handCFrame(player)
@@ -413,7 +369,7 @@ function Table.addPlayedCard(cardId: string, player: Player?, fromDrawSlot: bool
 	local slot = playedSlotLocal(playedCount)
 	playedCount += 1
 	local start = if fromDrawSlot
-		then drawSlot.CFrame * CFrame.Angles(math.rad(-90), 0, 0)
+		then drawSlot.CFrame
 		elseif player then handCFrame(player)
 		else ring:GetPivot() * slot * CFrame.new(0, 2, 0)
 	local card = makeCard(`Played{playedCount}`, start, cardId, workspace)

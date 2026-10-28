@@ -116,6 +116,18 @@ RULES.md is the source of truth. MVP only for now.
   - Cabin side (`Party`): in a reserved server, waits for the whole party to sit; after the run, everyone goes back to the lobby place
   - To finish: publish both places, put their ids in `Config.Places`, set the cabin place's Max Players to 4
   - Difficulty (RULES.md setup step 1) isn't defined anywhere yet, so the lobby has no difficulty setting
+- [x] I. Pacing, table, Hollow Man, clocks, UI pass (2026-10-28 request) *(written, not yet run in Studio)*
+  - The Hollow Man moves once every `Config.HollowMan.TurnsPerMove` (4) turns, not every round; solo runs no longer end in a few turns
+  - Table pieces are client-side on brass sticks from two wheels in the table; each wheel ratchets one step at a time with a mechanical sound and a spinning cog in the rim; Candle first, then him; the next turn waits (`Clock` stage)
+  - Card box replaces the stand: "It is your turn" carved in Creepster, next card sticks out of a slot (click it), Altar rack on top; the on-screen draw button is gone
+  - Hollow Man rig: knees, elbows, two-jointed fingers, coat strips, collar, spine, eye glow, hem smoke; loping walk, chase lean with arms reaching, head twitches or follows you. Server moves an invisible marker (`HollowManModel.marker`), clients animate (`HollowManView`, `HollowManRig`)
+  - Bug: flicker/drone/heartbeat/red tint followed the clock gap; now only when he's physically in your room or the next one, back to normal when he's gone. Fog and glimpses still follow the clock gap
+  - Every grandfather clock ticks (second hand, pendulum, tick sound) and shows the Candle's time; on-screen clock removed
+  - Rooms rise into place when built; bloom; vignette; new UI style (`Style`): period fonts, no grey boxes, fading messages
+  - Basement: real barred iron door with a red lamp during events, opens after; stairwell up to the trapdoor; the eliminated walk back
+  - Lanterns for everyone (key 1)
+  - After a run everyone respawns inside (escaped players were stuck outside the locked front door)
+  - Set Lighting.Technology to Future in Studio (scripts can't): lanterns and lamps then cast real shadows
 - [ ] C2: clue signs in rooms (lullaby audio still to find)
 - [ ] C3: Journal (M)
 - Clue decisions: the 9 defaults agreed on 2026-10-28 (sign placement, sign shown only while active, second copy re-rolls the spot, Tally 3 rooms 1-5 marks, Doll always appears/fake frowns after 3rd true clue, shared Journal with "Record" prompt, manual cross-out, exits not in deck yet, faked mirror)

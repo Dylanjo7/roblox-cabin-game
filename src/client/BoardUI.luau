@@ -226,7 +226,7 @@ function BoardUI.init(gui: ScreenGui)
 	prompt.Size = UDim2.fromOffset(110, 30)
 	prompt.BackgroundColor3 = Color3.fromRGB(40, 90, 50)
 	prompt.TextColor3 = Color3.fromRGB(240, 240, 230)
-	prompt.Font = Enum.Font.GothamBold
+	prompt.Font = Enum.Font.Fondamento
 	prompt.TextSize = 16
 	prompt.Text = "Place (click)"
 	prompt.Visible = false
@@ -243,7 +243,7 @@ function BoardUI.init(gui: ScreenGui)
 	hint.BackgroundColor3 = Color3.fromRGB(18, 20, 18)
 	hint.BackgroundTransparency = 0.3
 	hint.TextColor3 = Color3.fromRGB(230, 222, 200)
-	hint.Font = Enum.Font.GothamMedium
+	hint.Font = Enum.Font.Fondamento
 	hint.TextSize = 16
 	hint.Text = BOARD_HINT
 	hint.Visible = false

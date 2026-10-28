@@ -41,9 +41,8 @@ function TheKnock.onTimeout(run: EventRun): { Player }
 	-- The door opens. He's standing in it.
 	local folder = run.data.folder
 	if folder then
-		local figure = HollowManModel.build()
-		figure:PivotTo(EventKit.frontDoor())
-		figure.Parent = folder
+		local figure = HollowManModel.marker(EventKit.frontDoor(), folder)
+		figure:SetAttribute("Watch", true) -- he looks straight at you
 		EventKit.sound("caught", run.data.door, 0.8)
 	end
 	local failed = {}
