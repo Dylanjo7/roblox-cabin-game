@@ -11,6 +11,7 @@ local EVENTS = {
 	"RequestStartTurn", -- client -> server: T pressed while seated
 	"SubmitPeekOrder", -- client -> server: new order for the peeked cards
 	"RequestToggleExit", -- client -> server: cross an exit out of the Journal (or back in)
+	"RequestMarkClue", -- client -> server: cycle a clue result's mark in the Journal (found / ruled out / none)
 	"PublicState", -- server -> all: public game state snapshot
 	"PrivateHand", -- server -> one player: that player's own hand
 	"PeekCards", -- server -> one player: top cards for Peek

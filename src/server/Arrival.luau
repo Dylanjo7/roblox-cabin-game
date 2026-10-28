@@ -16,8 +16,9 @@ local MapGrid = require(script.Parent.MapGrid)
 local Outside = require(script.Parent.Outside)
 local StateSync = require(script.Parent.StateSync)
 
-local DOOR = Color3.fromRGB(196, 186, 160)
-local DOOR_PANEL = Color3.fromRGB(176, 166, 140)
+local DOOR = Color3.fromRGB(64, 44, 30) -- old, dark, weathered oak
+local DOOR_PANEL = Color3.fromRGB(78, 54, 36)
+local IRON = Color3.fromRGB(34, 32, 30)
 local BRASS = Color3.fromRGB(150, 120, 60)
 
 local Arrival = {}
@@ -58,18 +59,52 @@ local function buildDoor()
 	pivot.CanCollide = false
 	door.PrimaryPart = pivot
 	local panelCf = hinge * CFrame.new(fd.Width / 2, fd.Height / 2, 0)
-	part(door, "Door", Vector3.new(fd.Width - 0.1, fd.Height - 0.1, 0.4), panelCf, DOOR)
-	for _, y in { 1.9, -1.9 } do
-		for _, side in { -1, 1 } do
-			local panel = part(door, "Panel", Vector3.new(fd.Width - 1, fd.Height / 2 - 1.2, 0.1), panelCf * CFrame.new(0, y, side * 0.24), DOOR_PANEL)
-			panel.CanCollide = false
+	local w, h = fd.Width - 0.1, fd.Height - 0.1
+	part(door, "Door", Vector3.new(w, h, 0.4), panelCf, DOOR, Enum.Material.WoodPlanks)
+	local function deco(name: string, size: Vector3, cf: CFrame, color: Color3, material: Enum.Material?): Part
+		local p = part(door, name, size, cf, color, material)
+		p.CanCollide = false
+		return p
+	end
+	-- Both faces: a small four-pane window up top, then four raised panels in a stile frame.
+	for _, side in { -1, 1 } do
+		local face = panelCf * CFrame.new(0, 0, side * 0.21)
+		deco("Stile", Vector3.new(0.35, h, 0.06), face * CFrame.new(-w / 2 + 0.18, 0, 0), DOOR_PANEL)
+		deco("Stile", Vector3.new(0.35, h, 0.06), face * CFrame.new(w / 2 - 0.18, 0, 0), DOOR_PANEL)
+		deco("Rail", Vector3.new(w, 0.35, 0.06), face * CFrame.new(0, -h / 2 + 0.3, 0), DOOR_PANEL)
+		deco("Rail", Vector3.new(w, 0.3, 0.06), face * CFrame.new(0, 0.6, 0), DOOR_PANEL)
+		deco("Rail", Vector3.new(w, 0.3, 0.06), face * CFrame.new(0, h / 2 - 2.2, 0), DOOR_PANEL)
+		deco("Rail", Vector3.new(w, 0.3, 0.06), face * CFrame.new(0, h / 2 - 0.18, 0), DOOR_PANEL)
+		for _, x in { -0.8, 0.8 } do
+			for _, y in { -1.9, -0.25 } do
+				deco("RaisedPanel", Vector3.new(1.2, 1.3, 0.08), face * CFrame.new(x, y, side * 0.02), DOOR_PANEL, Enum.Material.Wood)
+			end
 		end
 	end
-	for _, side in { -1, 1 } do
-		local knob = part(door, "Knob", Vector3.new(0.35, 0.35, 0.35), panelCf * CFrame.new(fd.Width / 2 - 0.5, -0.2, side * 0.35), BRASS, Enum.Material.Metal)
-		knob.Shape = Enum.PartType.Ball
-		knob.CanCollide = false
+	-- The window: grimy glass with a cross of glazing bars, set through the door.
+	local glass = deco("Window", Vector3.new(w - 1, 1.5, 0.1), panelCf * CFrame.new(0, h / 2 - 1.2, 0), Color3.fromRGB(60, 70, 64), Enum.Material.Glass)
+	glass.Transparency = 0.45
+	for _, z in { -0.22, 0.22 } do
+		deco("GlazingBar", Vector3.new(0.1, 1.5, 0.06), panelCf * CFrame.new(0, h / 2 - 1.2, z), DOOR_PANEL)
+		deco("GlazingBar", Vector3.new(w - 1, 0.1, 0.06), panelCf * CFrame.new(0, h / 2 - 1.2, z), DOOR_PANEL)
 	end
+	-- Iron strap hinges on the hinge side, outside face, and studs along them.
+	for _, y in { -h / 2 + 1.1, h / 2 - 1.1 } do
+		deco("StrapHinge", Vector3.new(w * 0.55, 0.22, 0.05), panelCf * CFrame.new(-w / 2 + w * 0.275, y, 0.27), IRON, Enum.Material.Metal)
+		for i = 0, 2 do
+			local stud = deco("Stud", Vector3.new(0.1, 0.1, 0.1), panelCf * CFrame.new(-w / 2 + 0.3 + i * 0.7, y, 0.3), IRON, Enum.Material.Metal)
+			stud.Shape = Enum.PartType.Ball
+		end
+	end
+	-- Handles both sides, an iron ring knocker outside, a keyhole plate.
+	for _, side in { -1, 1 } do
+		local knob = deco("Knob", Vector3.new(0.32, 0.32, 0.32), panelCf * CFrame.new(w / 2 - 0.45, -0.3, side * 0.36), BRASS, Enum.Material.Metal)
+		knob.Shape = Enum.PartType.Ball
+		deco("KeyPlate", Vector3.new(0.22, 0.5, 0.04), panelCf * CFrame.new(w / 2 - 0.45, -0.75, side * 0.23), BRASS, Enum.Material.Metal)
+	end
+	local ring = deco("Knocker", Vector3.new(0.08, 0.6, 0.6), panelCf * CFrame.new(0, 1.2, 0.3) * CFrame.Angles(0, math.rad(90), 0), IRON, Enum.Material.Metal)
+	ring.Shape = Enum.PartType.Cylinder
+	deco("KnockerMount", Vector3.new(0.25, 0.25, 0.1), panelCf * CFrame.new(0, 1.55, 0.27), IRON, Enum.Material.Metal)
 	door.WorldPivot = hinge
 	door.Parent = workspace
 	angle.Changed:Connect(function(a: number)

@@ -22,7 +22,11 @@ type Figure = {
 	real: boolean, -- counts as him being here (not just a glimpse)
 }
 
-export type Handle = { destroy: () -> () }
+export type Handle = {
+	destroy: () -> (),
+	setWatch: (watch: boolean) -> (), -- start or stop his head following you
+	position: () -> Vector3,
+}
 
 local HollowManView = {}
 
@@ -68,6 +72,12 @@ function HollowManView.spawnLocal(cf: CFrame, watch: boolean, real: boolean): Ha
 	return {
 		destroy = function()
 			remove(figure)
+		end,
+		setWatch = function(watch: boolean)
+			figure.watch = watch
+		end,
+		position = function(): Vector3
+			return figure.pivot.Position
 		end,
 	}
 end

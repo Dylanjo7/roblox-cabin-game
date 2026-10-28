@@ -24,6 +24,7 @@ local PeekUI = require(script.Parent.PeekUI)
 local SwapUI = require(script.Parent.SwapUI)
 local Reflections = require(script.Parent.Reflections)
 local RoomRise = require(script.Parent.RoomRise)
+local Scares = require(script.Parent.Scares)
 local TablePieces = require(script.Parent.TablePieces)
 
 local gui = Hud.init()
@@ -39,6 +40,7 @@ HollowManView.init()
 TablePieces.init()
 Clocks.init()
 RoomRise.init()
+Scares.init(gui)
 Atmosphere.init()
 Reflections.init()
 Cursor.init(gui, function(): boolean
@@ -59,6 +61,7 @@ local doorWasClosed: boolean? = nil -- nil until the first state arrives
 local function setState(state)
 	Hud.setState(state)
 	Clocks.setState(state)
+	Scares.setState(state)
 	EventUI.setState(state)
 	HandUI.setState(state)
 	if state.cabin then

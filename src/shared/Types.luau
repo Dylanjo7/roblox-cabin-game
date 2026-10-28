@@ -91,6 +91,7 @@ export type JournalEntry = {
 export type JournalPublic = {
 	entries: { JournalEntry },
 	crossed: { string }, -- exit ids the group has crossed out
+	marks: { [string]: string }?, -- clue result id -> "found" | "ruled_out"
 }
 
 export type ResultPublic = {

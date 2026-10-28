@@ -246,6 +246,17 @@ local Config = {
 		FogColor = Color3.fromRGB(12, 14, 18),
 	},
 
+	-- Jump scares (client/Scares): rare, never at the table, only once he's on the clock.
+	Scares = {
+		MinGapSeconds = 90, -- at least this long between any two scares
+		BehindYouChance = 0.25, -- each time you spin round quickly
+		BehindYouShowSeconds = 0.45,
+		CornerChance = 0.08, -- each time you walk into another room
+		CornerWaitSeconds = 10, -- he waits in the corner this long for you to notice him
+		FaceSeconds = 0.55, -- his face when you're caught in an event
+		JournalChance = 0.15, -- opening the Journal once he's past midnight
+	},
+
 	-- Everyone's lantern (key 1 to hold it up).
 	Lantern = {
 		Range = 18,
