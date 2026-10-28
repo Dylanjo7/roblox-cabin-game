@@ -118,12 +118,19 @@ local HANDLERS: { [string]: Handler } = {
 			Remotes.notify(ctx.player, "Swap: there's nobody to trade hands with.")
 			return true
 		end
-		-- Choose who to trade with (only one choice in a 2-player run, so it's automatic).
+		-- Choose who to trade with (only one choice in a 2-player run, so it's automatic). The list
+		-- runs round the table from the next player, so the timeout default is the next player.
 		local options = {}
-		for _, p in ctx.players do
+		local start = table.find(ctx.players, ctx.player) or 0
+		for i = 1, #ctx.players - 1 do
+			local p = ctx.players[(start + i - 1) % #ctx.players + 1]
 			if p ~= ctx.player and p.Parent then
 				table.insert(options, p)
 			end
+		end
+		if #options == 0 then
+			Remotes.notify(ctx.player, "Swap: there's nobody to trade hands with.")
+			return true
 		end
 		if #options == 1 then
 			swapWith(ctx.player, options[1], ctx.players)
@@ -143,7 +150,12 @@ local HANDLERS: { [string]: Handler } = {
 			if swap and swap.token == token then
 				pendingSwap = nil
 				Remotes.event("SwapOptions"):FireClient(swap.player, nil)
-				swapWith(swap.player, swap.options[1], swap.players)
+				for _, other in swap.options do
+					if other.Parent then
+						swapWith(swap.player, other, swap.players)
+						break
+					end
+				end
 				swap.onDone()
 			end
 		end)
@@ -161,6 +173,21 @@ function CardEffects.play(card: Card, ctx: Context): boolean
 	local handler = HANDLERS[def.effect or "none"]
 	assert(handler, `No handler for effect {def.effect}`)
 	return handler(ctx)
+end
+
+-- A player left the game: drop a Peek or Swap they were in the middle of, so it can't finish
+-- their turn later. Returns true if they had one pending.
+function CardEffects.cancelFor(player: Player): boolean
+	local had = false
+	if pendingPeek and pendingPeek.player == player then
+		pendingPeek = nil
+		had = true
+	end
+	if pendingSwap and pendingSwap.player == player then
+		pendingSwap = nil
+		had = true
+	end
+	return had
 end
 
 function CardEffects.reset()
@@ -206,7 +233,7 @@ local function onSubmitSwapTarget(player: Player, userId: any)
 		return
 	end
 	for _, other in swap.options do
-		if other.UserId == userId then
+		if other.UserId == userId and other.Parent then
 			pendingSwap = nil
 			Remotes.event("SwapOptions"):FireClient(player, nil)
 			swapWith(player, other, swap.players)

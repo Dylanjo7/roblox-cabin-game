@@ -22,6 +22,7 @@ local Forest = require(script.Parent.Forest)
 local GameState = require(script.Parent.GameState)
 local Hands = require(script.Parent.Hands)
 local MapGrid = require(script.Parent.MapGrid)
+local Party = require(script.Parent.Party)
 local Secrets = require(script.Parent.Secrets)
 local Setup = require(script.Parent.Setup)
 local StateSync = require(script.Parent.StateSync)
@@ -76,6 +77,7 @@ CardEffects.init()
 EventRunner.init()
 TurnController.init()
 Setup.resetCabin()
+Party.init()
 Arrival.init() -- after the Parlor exists: porch, door, and the walk up from the truck
 Basement.init() -- follows the Crawlspace wherever it is placed
 
@@ -92,6 +94,8 @@ end)
 GameState.onEnter("Lobby", function()
 	EventRunner.abort()
 	TurnController.reset()
+	-- Out of the chairs, so the next run starts only when people sit down again.
+	Table.standAll()
 end)
 
 -- 3:00 AM: the final escape. Win if anyone gets out through the true exit.
@@ -121,16 +125,29 @@ end)
 
 GameState.onEnter("GameOver", function()
 	task.delay(Config.GameOverSeconds, function()
-		if GameState.get() == "GameOver" then
-			GameState.transition("Lobby")
+		if GameState.get() ~= "GameOver" then
+			return
 		end
+		-- A party from the ranger station goes back there; otherwise the table resets for another run.
+		if not Party.returnToLobby() then
+			GameState.transition("Lobby")
+			return
+		end
+		-- Anyone the teleport didn't take (it can fail after starting) gets the table back.
+		task.delay(20, function()
+			if GameState.get() == "GameOver" and #Players:GetPlayers() > 0 then
+				GameState.transition("Lobby")
+			end
+		end)
 	end)
 end)
 
 -- Starting a run: everyone in the server sits at the table (1-4 players). It starts as soon as
 -- everyone is seated, or Config.LobbyStartSeconds after the first person sits, with whoever is
--- seated then. Turn order goes round the table by seat.
-local countdownToken = 0
+-- seated then. A party sent by the lobby place counts players still loading in, so it waits
+-- for them (up to the countdown). Turn order goes round the table by seat.
+local countdownToken = 0 -- bumped to cancel a pending start
+local countdownRunning = false
 
 local function seatedPlayers(): { Player }
 	local seated = {}
@@ -145,8 +162,13 @@ local function seatedPlayers(): { Player }
 	return seated
 end
 
-local function startRun()
+local function cancelStart()
 	countdownToken += 1
+	countdownRunning = false
+end
+
+local function startRun()
+	cancelStart()
 	if GameState.get() ~= "Lobby" then
 		return
 	end
@@ -158,32 +180,39 @@ local function startRun()
 	GameState.transition("Setup")
 end
 
+-- Start startRun after `seconds` unless something cancels it first.
+local function scheduleStart(seconds: number)
+	local token = countdownToken
+	task.delay(seconds, function()
+		if countdownToken == token then
+			startRun()
+		end
+	end)
+end
+
 local function checkLobby()
 	if GameState.get() ~= "Lobby" then
 		return
 	end
 	local seated = seatedPlayers()
-	local everyone = #Players:GetPlayers()
+	local everyone = math.min(math.max(#Players:GetPlayers(), Party.expectedCount()), Config.MaxPlayers)
 	if #seated == 0 then
-		countdownToken += 1 -- everyone stood up again
+		cancelStart() -- everyone stood up again
 		return
 	end
-	if #seated >= everyone or #seated >= Config.MaxPlayers then
-		task.delay(1, startRun)
+	if #seated >= everyone then
+		-- Everyone's down: start in a moment (standing up again in that moment cancels it).
+		cancelStart()
+		scheduleStart(1)
 		return
 	end
-	if countdownToken % 2 == 0 then
-		-- Start the countdown (odd token = running).
-		countdownToken += 1
-		local token = countdownToken
+	if not countdownRunning then
+		cancelStart()
+		countdownRunning = true
 		for _, player in Players:GetPlayers() do
 			Remotes.notify(player, `{#seated} of {everyone} seated. The game starts when everyone sits down, or in {Config.LobbyStartSeconds} seconds.`)
 		end
-		task.delay(Config.LobbyStartSeconds, function()
-			if countdownToken == token then
-				startRun()
-			end
-		end)
+		scheduleStart(Config.LobbyStartSeconds)
 	end
 end
 
@@ -191,8 +220,19 @@ Table.SeatChanged:Connect(function()
 	checkLobby()
 end)
 GameState.onEnter("Lobby", function()
-	countdownToken += countdownToken % 2 -- stop any countdown left from before
+	cancelStart() -- nothing left over from before
 	task.defer(checkLobby)
+end)
+
+-- Joining while a run is going: you watch this one and play the next.
+Players.PlayerAdded:Connect(function(player: Player)
+	if GameState.get() ~= "Lobby" then
+		task.delay(3, function()
+			if player.Parent and not table.find(TurnController.players(), player) then
+				Remotes.notify(player, "A run is already under way. You'll be dealt in to the next one.")
+			end
+		end)
+	end
 end)
 
 Players.PlayerRemoving:Connect(function(player: Player)

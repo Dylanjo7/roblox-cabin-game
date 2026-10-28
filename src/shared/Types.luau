@@ -29,6 +29,8 @@ export type TurnPublic = {
 	stage: TurnStage,
 	round: number,
 	placingId: string?, -- the committed room being placed (played cards are public)
+	order: { string }?, -- display names in turn order
+	unseated: { string }?, -- players in the run who aren't at the table yet
 }
 
 export type CellPublic = {

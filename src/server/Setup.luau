@@ -73,7 +73,7 @@ function Setup.run(players: { Player })
 	-- The Crawlspace is set aside, not shuffled in, and is always the first card played.
 	local first = players[1]
 	TurnController.requirePlacement(first, Deck.newCard("crawlspace"), function()
-		deal(players)
+		deal(TurnController.players()) -- not `players`: someone may have left during setup
 		TurnController.startNextTurn()
 		GameState.transition("TurnLoop")
 	end)

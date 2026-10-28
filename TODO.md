@@ -103,8 +103,19 @@ RULES.md is the source of truth. MVP only for now.
 - Next (your new requests): rooms of different sizes (e.g. small Bathroom), a basement under the Crawlspace where the eliminated wait behind a locked door until the event ends, a mechanical sound when pieces move on the clock
 - E. 8 exit rooms + 3 AM final escape + escape ending: the game becomes winnable
 - F. Bathroom -> Attic red card and attic search
-- G. Multiplayer 1-4 (turn rotation, Swap target)
-- H. Lobby place (ranger station, truck queue pads, reserved-server teleport); needs the experience published with two places
+- [x] G. Multiplayer 1-4 *(written, not yet run in Studio: needs a 2-4 player local test server)*
+  - Start: everyone in the server sits (or `Config.LobbyStartSeconds` after the first person sits, with whoever is seated); turn order by seat
+  - A turn can only start when everyone in the run is seated (RULES.md); the HUD names who's still standing and shows the turn order
+  - Swap: pick who to trade with (panel, `Config.SwapChooseSeconds`); timeout = next player round the table; players who left are skipped
+  - Leaving mid-run: out of the turn order; on their turn the turn ends (room/Peek/Swap dropped); during an event it ends with the event; leaving while placing the Crawlspace hands it to the next player; nobody left = back to the lobby
+  - After a run everyone is stood up, so a new run starts only when people sit again (it used to restart straight away)
+  - Joining mid-run: told you'll be dealt in to the next run
+- [x] H. Lobby place *(written, not yet run in Studio; teleports only work in a published experience)*
+  - `lobby.project.json` + `src/lobby/`: ranger station (desk, stove, bench, trail map with how to play, sign), gravel lot, pines, `Config.Lobby.Trucks` pickup trucks with boarding pads and a board showing aboard/countdown
+  - Stand on a pad to join that truck (max 4); leaves when full or `Config.Lobby.DepartSeconds` after the first person gets on; `ReserveServer` + `TeleportAsync` with `{ party = userIds }`; failed teleports retry once
+  - Cabin side (`Party`): in a reserved server, waits for the whole party to sit; after the run, everyone goes back to the lobby place
+  - To finish: publish both places, put their ids in `Config.Places`, set the cabin place's Max Players to 4
+  - Difficulty (RULES.md setup step 1) isn't defined anywhere yet, so the lobby has no difficulty setting
 - [ ] C2: clue signs in rooms (lullaby audio still to find)
 - [ ] C3: Journal (M)
 - Clue decisions: the 9 defaults agreed on 2026-10-28 (sign placement, sign shown only while active, second copy re-rolls the spot, Tally 3 rooms 1-5 marks, Doll always appears/fake frowns after 3rd true clue, shared Journal with "Record" prompt, manual cross-out, exits not in deck yet, faked mirror)

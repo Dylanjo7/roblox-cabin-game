@@ -1,0 +1,6 @@
+# Studio lock files
+*.rbxl.lock
+*.rbxlx.lock
+# Nested copies of the repo (not part of the project)
+/Hollow Pines/
+/roblox-cabin-game/

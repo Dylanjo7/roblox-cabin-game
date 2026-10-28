@@ -105,6 +105,21 @@ function Table.freeSeat(): number?
 	return nil
 end
 
+-- Get everyone out of their chairs (back in the lobby after a run, so sitting down again is what
+-- starts the next one).
+function Table.standAll()
+	for _, seat in seats do
+		local humanoid = seat.Occupant
+		if humanoid then
+			local weld = seat:FindFirstChild("SeatWeld")
+			if weld then
+				weld:Destroy()
+			end
+			humanoid.Sit = false
+		end
+	end
+end
+
 function Table.seatOf(player: Player): number?
 	for i, seat in seats do
 		if playerIn(seat) == player then

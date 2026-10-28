@@ -53,7 +53,7 @@ local function instruction(state: Types.PublicState): string
 		if state.arrival and not state.arrival.doorClosed then
 			return "Walk up the path to the cabin. The door is open."
 		end
-		return "HOLLOW PINES  ·  Sit at the Parlor table to begin. (Already seated? Stand up and sit again.)"
+		return "HOLLOW PINES  ·  Sit at the Parlor table to begin. The game starts when everyone is seated."
 	elseif state.phase == "Setup" then
 		if turn and turn.placingId then
 			return "Setup · Place the Crawlspace on one of the Parlor's doors."
@@ -63,11 +63,14 @@ local function instruction(state: Types.PublicState): string
 		if not turn or not turn.activeUserId then
 			return ""
 		end
+		local standing = if turn.stage == "WaitingStart" and turn.unseated and #turn.unseated > 0
+			then `Waiting for {table.concat(turn.unseated, ", ")} to sit down.`
+			else nil
 		if turn.activeUserId ~= localPlayer.UserId then
-			return `Waiting for {turn.activeName}`
+			return if standing then `{turn.activeName}'s turn · {standing}` else `Waiting for {turn.activeName}`
 		end
 		if turn.stage == "WaitingStart" then
-			return "Your turn. Be seated and press T to start."
+			return standing or "Your turn. Be seated and press T to start."
 		elseif turn.stage == "Draw" then
 			local altar = state.altar and #state.altar or 0
 			if state.deckCount == 0 then
@@ -99,6 +102,15 @@ function Hud.setState(state: Types.PublicState)
 	local parts = {}
 	if state.phase == "TurnLoop" and state.turn then
 		table.insert(parts, `Round {state.turn.round}`)
+		local order = state.turn.order
+		if order and #order > 1 then
+			-- Turn order with the active player in brackets.
+			local names = {}
+			for _, name in order do
+				table.insert(names, if name == state.turn.activeName then `[{name}]` else name)
+			end
+			table.insert(parts, table.concat(names, " > "))
+		end
 	end
 	if state.deckCount and state.phase ~= "Lobby" then
 		table.insert(parts, `Deck {state.deckCount}`)

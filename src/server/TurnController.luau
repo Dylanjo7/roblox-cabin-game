@@ -83,6 +83,9 @@ function TurnController.beginRun(players: { Player })
 end
 
 -- A player left mid-run: take them out of the turn order. Returns false if nobody is left.
+-- If it was their turn, it ends: a room they had to place goes nowhere, a Peek or Swap they were
+-- choosing is dropped. During an event their turn ends when the event does, as it would have.
+-- If they left while placing the Crawlspace, the next player places it instead.
 function TurnController.removePlayer(player: Player): boolean
 	local index = table.find(order, player)
 	if not index then
@@ -93,21 +96,36 @@ function TurnController.removePlayer(player: Player): boolean
 	if #order == 0 then
 		return false
 	end
-	if index < activeIndex then
-		activeIndex -= 1
-	end
-	if activeIndex > #order then
-		activeIndex = 1
-	end
 	for _, p in order do
 		Remotes.notify(p, `{player.DisplayName} left. The game goes on without them.`)
 	end
-	if wasActive and stage ~= "Event" then
-		-- Their turn just ends; a room they had to place goes nowhere.
-		if pending and pending.player == player then
-			pending = nil
+	if not wasActive then
+		if index < activeIndex then
+			activeIndex -= 1
 		end
-		TurnController.startNextTurn()
+		StateSync.broadcast()
+		return true
+	end
+
+	-- Point at the player before them, so ending the turn hands it to the next one (and counts
+	-- the round as finished if they were last in the order).
+	activeIndex -= 1
+	local phase = GameState.get()
+	local held = pending
+	if held and held.player == player then
+		pending = nil
+		if phase == "Setup" then
+			activeIndex = math.clamp(activeIndex + 1, 1, #order)
+			local nextPlayer = order[activeIndex]
+			faceActive()
+			TurnController.requirePlacement(nextPlayer, held.card, held.onPlaced)
+			Remotes.notify(nextPlayer, "Place the Crawlspace on one of the Parlor's doors.")
+			return true
+		end
+	end
+	CardEffects.cancelFor(player)
+	if phase == "TurnLoop" and stage ~= "Event" then
+		TurnController.endTurn()
 	end
 	StateSync.broadcast()
 	return true
@@ -175,6 +193,17 @@ function TurnController.requirePlacement(player: Player, card: Card, onPlaced: (
 	return true
 end
 
+-- Names of players in the run who aren't sitting at the table (a turn can't start until they are).
+function TurnController.unseated(): { string }
+	local names = {}
+	for _, p in order do
+		if Table.seatOf(p) == nil then
+			table.insert(names, p.DisplayName)
+		end
+	end
+	return names
+end
+
 local function isActiveTurn(player: Player, wantStage: TurnStage): (boolean, string?)
 	if GameState.get() ~= "TurnLoop" then
 		return false, "There's no turn in progress."
@@ -203,6 +232,11 @@ local function onRequestStartTurn(player: Player)
 	end
 	if stage ~= "WaitingStart" then
 		Remotes.notify(player, "Your turn has already started.")
+		return
+	end
+	local standing = TurnController.unseated()
+	if #standing > 0 then
+		Remotes.notify(player, `Everyone has to be seated first. Waiting for {table.concat(standing, ", ")}.`)
 		return
 	end
 
@@ -414,16 +448,25 @@ function TurnController.init()
 		if player ~= nil and player == order[activeIndex] then
 			Table.faceSeat(seatIndex)
 		end
+		if #order > 0 then
+			StateSync.broadcast() -- who's still standing
+		end
 	end)
 
 	StateSync.register("turn", function()
 		local active = order[activeIndex]
+		local names = {}
+		for _, p in order do
+			table.insert(names, p.DisplayName)
+		end
 		return {
 			activeUserId = active and active.UserId,
 			activeName = active and active.DisplayName,
 			stage = stage,
 			round = round,
 			placingId = pending and pending.card.id,
+			order = names,
+			unseated = TurnController.unseated(),
 		}
 	end)
 	StateSync.register("deckCount", Deck.count)

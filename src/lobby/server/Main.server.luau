@@ -1,0 +1,232 @@
+--!strict
+-- Lobby place boot: builds the ranger station and runs the trucks. Standing on a truck's pad
+-- puts you in its group (1 to Config.MaxPlayers). The truck leaves when it's full, or
+-- Config.Lobby.DepartSeconds after the first person gets on: the server reserves a private
+-- server of the cabin place and teleports the group there together, with the party's UserIds
+-- as teleport data (the cabin waits for all of them; see src/server/Party.luau).
+
+local Lighting = game:GetService("Lighting")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local TeleportService = game:GetService("TeleportService")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+
+local Station = require(script.Parent.Station)
+
+type Queue = {
+	truck: Station.Truck,
+	members: { Player },
+	departAt: number?, -- os.clock() when it leaves; nil while empty
+	leaving: boolean, -- reserving / teleporting; nobody can get on or off
+}
+
+local notifyRemote = Instance.new("RemoteEvent")
+notifyRemote.Name = "LobbyNotify"
+notifyRemote.Parent = ReplicatedStorage
+
+local function notify(player: Player, text: string)
+	notifyRemote:FireClient(player, text)
+end
+
+Lighting.ClockTime = Config.Lobby.ClockTime
+Lighting.Brightness = 1
+Lighting.Ambient = Color3.fromRGB(60, 56, 64)
+Lighting.OutdoorAmbient = Color3.fromRGB(70, 66, 80)
+Lighting.FogColor = Color3.fromRGB(40, 40, 52)
+Lighting.FogEnd = 320
+
+local queues: { Queue } = {}
+for _, truck in Station.build() do
+	table.insert(queues, { truck = truck, members = {}, departAt = nil, leaving = false })
+end
+
+local teleporting: { [Player]: boolean } = {}
+local retries: { [Player]: number } = {}
+local warnedFull: { [Player]: boolean } = {}
+
+-- Which pad (queue index) this player is standing on, if any.
+local function padUnder(player: Player): number?
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not root or not root:IsA("BasePart") then
+		return nil
+	end
+	for i, queue in queues do
+		local pad = queue.truck.pad
+		local rel = pad.CFrame:PointToObjectSpace(root.Position)
+		if math.abs(rel.X) <= pad.Size.X / 2 and math.abs(rel.Z) <= pad.Size.Z / 2 and rel.Y > -2 and rel.Y < 8 then
+			return i
+		end
+	end
+	return nil
+end
+
+local function setBoard(queue: Queue)
+	local n = #queue.members
+	local max = Config.MaxPlayers
+	local text
+	if queue.leaving then
+		text = "Heading up to the cabin..."
+	elseif n == 0 then
+		text = `Stand on the pad to ride\n0/{max}`
+	else
+		local left = math.max(0, math.ceil((queue.departAt or os.clock()) - os.clock()))
+		text = `{n}/{max} aboard · leaving in {left}s`
+	end
+	queue.truck.label.Text = text
+end
+
+local function reset(queue: Queue)
+	for _, player in queue.members do
+		teleporting[player] = nil
+	end
+	queue.members = {}
+	queue.departAt = nil
+	queue.leaving = false
+	setBoard(queue)
+end
+
+local function depart(queue: Queue)
+	queue.leaving = true
+	setBoard(queue)
+	local group = table.clone(queue.members)
+	for _, player in group do
+		teleporting[player] = true
+	end
+
+	local placeId = Config.Places.GamePlaceId
+	local problem: string? = nil
+	if RunService:IsStudio() then
+		problem = "Teleports don't work in Studio. Publish the experience and try it in a live server."
+	elseif placeId == 0 then
+		problem = "The cabin place isn't set up yet (Config.Places.GamePlaceId is 0)."
+	end
+	if problem then
+		for _, player in group do
+			notify(player, problem)
+		end
+		task.wait(3)
+		reset(queue)
+		return
+	end
+
+	local ok, codeOrErr = pcall(function()
+		return TeleportService:ReserveServer(placeId)
+	end)
+	if not ok then
+		warn(`Hollow Pines lobby: ReserveServer failed: {codeOrErr}`)
+		for _, player in group do
+			notify(player, "Couldn't reach the cabin. Try again in a moment.")
+		end
+		reset(queue)
+		return
+	end
+
+	local party = {}
+	local present = {}
+	for _, player in group do
+		if player.Parent == Players then
+			table.insert(party, player.UserId)
+			table.insert(present, player)
+			retries[player] = 0
+		end
+	end
+	if #present == 0 then
+		reset(queue)
+		return
+	end
+	local options = Instance.new("TeleportOptions")
+	options.ReservedServerAccessCode = codeOrErr :: string
+	options:SetTeleportData({ party = party })
+	for _, player in present do
+		notify(player, "The truck pulls away down the dark road...")
+	end
+	local sent, err = pcall(function()
+		TeleportService:TeleportAsync(placeId, present, options)
+	end)
+	if not sent then
+		warn(`Hollow Pines lobby: TeleportAsync failed: {err}`)
+		for _, player in present do
+			notify(player, "The truck wouldn't start. Try again in a moment.")
+		end
+		reset(queue)
+		return
+	end
+	-- Give the teleport time to take everyone, then free the truck for the next group.
+	task.wait(15)
+	reset(queue)
+end
+
+-- A teleport that started but failed for one player: try again, then give up and let them re-queue.
+TeleportService.TeleportInitFailed:Connect(function(player: Player, result: Enum.TeleportResult, message: string, placeId: number, options: TeleportOptions?)
+	local tries = retries[player] or 0
+	if tries < Config.Lobby.TeleportRetries and options then
+		retries[player] = tries + 1
+		task.wait(2)
+		local ok = pcall(function()
+			TeleportService:TeleportAsync(placeId, { player }, options)
+		end)
+		if ok then
+			return
+		end
+	end
+	warn(`Hollow Pines lobby: teleport failed for {player.Name}: {result.Name} {message}`)
+	teleporting[player] = nil
+	notify(player, "You missed the truck. Get on the next one.")
+end)
+
+Players.PlayerRemoving:Connect(function(player: Player)
+	teleporting[player] = nil
+	retries[player] = nil
+	warnedFull[player] = nil
+end)
+
+-- Keep each truck's group in step with who's standing on its pad.
+while true do
+	task.wait(0.25)
+	local onPad: { [Player]: number } = {}
+	for _, player in Players:GetPlayers() do
+		if not teleporting[player] then
+			local index = padUnder(player)
+			if index then
+				onPad[player] = index
+			else
+				warnedFull[player] = nil
+			end
+		end
+	end
+	for i, queue in queues do
+		if not queue.leaving then
+			-- Keep the order people got on in; drop anyone who stepped off or left.
+			local members = {}
+			for _, player in queue.members do
+				if onPad[player] == i and player.Parent == Players then
+					table.insert(members, player)
+				end
+			end
+			for player, index in onPad do
+				if index == i and not table.find(members, player) then
+					if #members < Config.MaxPlayers then
+						table.insert(members, player)
+						notify(player, "You climb onto the truck. Step off to get down.")
+					elseif not warnedFull[player] then
+						warnedFull[player] = true
+						notify(player, "This truck is full. Try the other one.")
+					end
+				end
+			end
+			queue.members = members
+			if #members == 0 then
+				queue.departAt = nil
+			elseif not queue.departAt then
+				queue.departAt = os.clock() + Config.Lobby.DepartSeconds
+			end
+			if #members > 0 and (#members >= Config.MaxPlayers or os.clock() >= (queue.departAt :: number)) then
+				task.spawn(depart, queue)
+			end
+			setBoard(queue)
+		end
+	end
+end

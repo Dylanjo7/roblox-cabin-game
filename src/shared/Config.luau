@@ -40,7 +40,7 @@ local Config = {
 	PeekCount = 3,
 
 	GameOverSeconds = 8, -- how long the result shows before the table returns to the lobby
-	MaxPlayers = 4,
+	MaxPlayers = 4, -- also set the cabin place's Max Players to 4 on the Creator Dashboard
 	LobbyStartSeconds = 20, -- once someone sits, the run starts when everyone has, or after this
 	SwapChooseSeconds = 15, -- time to pick who to swap hands with (then the next player is picked)
 
@@ -209,6 +209,21 @@ local Config = {
 		ToastSeconds = 3,
 		IntroLineSeconds = 4.5,
 		EndingLineSeconds = 4,
+	},
+
+	-- The two places of the experience (fill in from the Creator Dashboard once both are published).
+	-- 0 = not published yet: the lobby can't send trucks and the cabin stays on its own lobby.
+	Places = {
+		LobbyPlaceId = 0, -- the ranger station (the experience's start place)
+		GamePlaceId = 0, -- the cabin
+	},
+
+	-- The ranger station lobby place.
+	Lobby = {
+		Trucks = 2, -- each truck takes one group of 1 to MaxPlayers
+		DepartSeconds = 15, -- once someone climbs on, the truck leaves after this (or as soon as it's full)
+		TeleportRetries = 1, -- a failed teleport is tried again this many times per player
+		ClockTime = 19.6, -- dusk
 	},
 
 	-- Testing switches. Leave off for real games.
