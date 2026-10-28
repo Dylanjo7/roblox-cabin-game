@@ -47,4 +47,55 @@ function Audio.loopVolume(name: string, volume: number, fadeSeconds: number?)
 	TweenService:Create(sound, TweenInfo.new(fadeSeconds or 2), { Volume = volume }):Play()
 end
 
+-- A recorded voice line (Config.Voice[key]) ready to play, or nil if it hasn't been recorded.
+-- radio: as if it's coming over a truck radio (thin, crackly).
+function Audio.voiceSound(key: string, radio: boolean?): Sound?
+	local id = Config.Voice[key]
+	if typeof(id) ~= "string" or id == "" then
+		return nil
+	end
+	if string.match(id, "^%d+$") then
+		id = `rbxassetid://{id}`
+	end
+	local sound = Instance.new("Sound")
+	sound.Name = `Voice_{key}`
+	sound.SoundId = id
+	sound.Volume = Config.VoiceVolume
+	if radio then
+		local eq = Instance.new("EqualizerSoundEffect")
+		eq.LowGain = -30
+		eq.MidGain = 4
+		eq.HighGain = -12
+		eq.Parent = sound
+		local crunch = Instance.new("DistortionSoundEffect")
+		crunch.Level = 0.35
+		crunch.Parent = sound
+	end
+	sound.Parent = SoundService
+	return sound
+end
+
+-- Wait (up to `seconds`) for a sound to load; its TimeLength is 0 until then.
+function Audio.waitLoaded(sound: Sound, seconds: number)
+	local waited = 0
+	while not sound.IsLoaded and waited < seconds do
+		waited += task.wait()
+	end
+end
+
+-- Say a voice line now, if it's been recorded. Yields briefly while it loads. Returns how many
+-- seconds it lasts (0 when there's no recording).
+function Audio.speak(key: string, radio: boolean?): number
+	local sound = Audio.voiceSound(key, radio)
+	if not sound then
+		return 0
+	end
+	Audio.waitLoaded(sound, 2)
+	sound.Ended:Once(function()
+		sound:Destroy()
+	end)
+	sound:Play()
+	return sound.TimeLength
+end
+
 return Audio

@@ -12,6 +12,7 @@ local TeleportService = game:GetService("TeleportService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
+local Places = require(Shared:WaitForChild("Places"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
 
 local Party = {}
@@ -46,10 +47,13 @@ local function readJoinData(player: Player)
 end
 
 -- After a run: back to the lobby place. Returns false if that isn't possible (not a reserved
--- server, no lobby place id set, Studio, or the teleport failed), so the cabin's own lobby runs.
+-- server, no lobby place found, Studio, or the teleport failed), so the cabin's own lobby runs.
 function Party.returnToLobby(): boolean
-	local lobbyId = Config.Places.LobbyPlaceId
-	if not Party.isReserved() or lobbyId == 0 or RunService:IsStudio() then
+	if not Party.isReserved() or RunService:IsStudio() then
+		return false
+	end
+	local lobbyId = Places.lobby()
+	if lobbyId == 0 then
 		return false
 	end
 	local players = Players:GetPlayers()

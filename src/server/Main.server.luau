@@ -21,6 +21,7 @@ Remotes.init()
 
 local Altar = require(script.Parent.Altar)
 local Arrival = require(script.Parent.Arrival)
+local Badges = require(script.Parent.Badges)
 local Basement = require(script.Parent.Basement)
 local CardEffects = require(script.Parent.CardEffects)
 local ClueSigns = require(script.Parent.ClueSigns)
@@ -102,6 +103,7 @@ end)
 local pendingPlayers: { Player } = {}
 
 GameState.onEnter("Setup", function()
+	Badges.awardAll(pendingPlayers, "FirstNight")
 	Setup.run(pendingPlayers)
 end)
 
@@ -136,6 +138,11 @@ GameState.onEnter("FinalEscape", function()
 			end
 		end
 		local escaped = FinalEscape.escaped()
+		local out = FinalEscape.escapedPlayers()
+		Badges.awardAll(out, "Escaped")
+		if #out > 0 and #out >= #TurnController.players() then
+			Badges.awardAll(out, "AllOut")
+		end
 		if #escaped > 0 then
 			GameState.endRun(true, `{table.concat(escaped, ", ")} got out through the {exitName}.`, "escaped")
 		elseif not built then
@@ -147,6 +154,10 @@ GameState.onEnter("FinalEscape", function()
 end)
 
 GameState.onEnter("GameOver", function()
+	local result = GameState.getResult()
+	if result and not result.won then
+		Badges.awardAll(TurnController.players(), "Caught")
+	end
 	task.delay(Config.GameOverSeconds, function()
 		if GameState.get() ~= "GameOver" then
 			return

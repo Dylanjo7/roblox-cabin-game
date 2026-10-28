@@ -91,8 +91,9 @@ function Cutscene.init(gui: ScreenGui)
 	end)
 end
 
--- Black screen, a title, then each line in turn. Returns when done or skipped.
-local function play(heading: string, lines: { string }, lineSeconds: number)
+-- Black screen, a title, then each line in turn (spoken too if it's been recorded: voice key
+-- `{voicePrefix}_{n}`; a line stays up until its recording is over). Returns when done or skipped.
+local function play(heading: string, lines: { string }, lineSeconds: number, voicePrefix: string)
 	playToken += 1
 	local token = playToken
 	overlay.Visible = true
@@ -102,13 +103,14 @@ local function play(heading: string, lines: { string }, lineSeconds: number)
 	fade(title, { TextTransparency = 0 }, 1.5)
 	fade(hint, { TextTransparency = 0.5 }, 1.5)
 	task.wait(2)
-	for _, entry in lines do
+	for i, entry in lines do
 		if token ~= playToken then
 			return
 		end
 		line.Text = entry
 		fade(line, { TextTransparency = 0 }, 0.8)
-		task.wait(lineSeconds)
+		local spoken = Audio.speak(`{voicePrefix}_{i}`)
+		task.wait(math.max(lineSeconds, spoken + 0.6))
 		if token ~= playToken then
 			return
 		end
@@ -128,7 +130,7 @@ local function play(heading: string, lines: { string }, lineSeconds: number)
 end
 
 function Cutscene.playIntro()
-	task.spawn(play, Story.Title, Story.Intro, Config.UI.IntroLineSeconds)
+	task.spawn(play, Story.Title, Story.Intro, Config.UI.IntroLineSeconds, "intro")
 end
 
 function Cutscene.playEnding(key: string)
@@ -137,7 +139,7 @@ function Cutscene.playEnding(key: string)
 		return
 	end
 	Audio.play("ending", 0.6)
-	task.spawn(play, ending.title, ending.lines, Config.UI.EndingLineSeconds)
+	task.spawn(play, ending.title, ending.lines, Config.UI.EndingLineSeconds, `ending_{key}`)
 end
 
 -- Arriving by the truck: the screen fades up from black, then the arrival lines appear one by
@@ -163,18 +165,21 @@ function Cutscene.playArrival(afterTrip: boolean?)
 			return
 		end
 		overlay.Visible = false
-		for _, entry in (if afterTrip then Story.ArrivalAfterTrip else Story.Arrival) do
+		for i, entry in (if afterTrip then Story.ArrivalAfterTrip else Story.Arrival) do
 			if token ~= playToken then
 				return
 			end
-			Cutscene.beat(entry)
+			Cutscene.beat(entry, if afterTrip then `arrival_{i}` else nil)
 			task.wait(5.5)
 		end
 	end)
 end
 
--- One line low on the screen that fades in and out.
-function Cutscene.beat(textLine: string)
+-- One line low on the screen that fades in and out (and its recording, if voiceKey has one).
+function Cutscene.beat(textLine: string, voiceKey: string?)
+	if voiceKey then
+		task.spawn(Audio.speak, voiceKey)
+	end
 	beatToken += 1
 	local token = beatToken
 	beatLabel.Text = textLine

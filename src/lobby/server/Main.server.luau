@@ -11,7 +11,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TeleportService = game:GetService("TeleportService")
 
-local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Places = require(Shared:WaitForChild("Places"))
 
 local LobbyShop = require(script.Parent.LobbyShop)
 local Station = require(script.Parent.Station)
@@ -123,12 +125,15 @@ local function depart(queue: Queue)
 		teleporting[player] = true
 	end
 
-	local placeId = Config.Places.GamePlaceId
 	local problem: string? = nil
+	local placeId = 0
 	if RunService:IsStudio() then
 		problem = "Teleports don't work in Studio. Publish the experience and try it in a live server."
-	elseif placeId == 0 then
-		problem = "The cabin place isn't set up yet (Config.Places.GamePlaceId is 0)."
+	else
+		placeId = Places.cabin()
+		if placeId == 0 then
+			problem = "Couldn't find the cabin. Publish it as a second place in this experience."
+		end
 	end
 	if problem then
 		for _, player in group do

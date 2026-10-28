@@ -6,6 +6,7 @@
 -- The Place prompt only shows where one of the room's doorways lines up with an open doorway,
 -- using the server's list of legal spots. The server re-checks every placement.
 
+local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -25,6 +26,7 @@ local VALID = Color3.fromRGB(120, 210, 130)
 local INVALID = Color3.fromRGB(210, 90, 80)
 local RENDER_STEP = "HollowPinesBoard"
 local BOARD_HINT = "R rotate  ·  Scroll zoom  ·  Left click place  ·  B leave board"
+local TOUCH_HINT = "Tap a spot, tap it again to place  ·  Rotate and Board buttons on the right"
 local AWAY_HINT = "You still have a room to place  ·  B opens the board"
 
 local BoardUI = {}
@@ -69,9 +71,13 @@ local function targetCFrame(): CFrame
 	return CFrame.lookAt(center + Vector3.new(0, height, 0), center, Vector3.new(0, 0, -1))
 end
 
-local function cellUnderMouse(): (number?, number?)
-	local mouse = UserInputService:GetMouseLocation()
-	local ray = camera:ViewportPointToRay(mouse.X, mouse.Y)
+-- On a touch screen the room is previewed where you tap, and placed when you tap there again.
+local touching = false
+local tapX: number?, tapZ: number? = nil, nil
+local tapScreen = Vector2.zero
+
+-- The map cell a ray from the camera lands on.
+local function cellOnRay(ray: Ray): (number?, number?)
 	local planeY = mapCenter().Y
 	if math.abs(ray.Direction.Y) < 1e-4 then
 		return nil, nil
@@ -86,6 +92,14 @@ local function cellUnderMouse(): (number?, number?)
 		return nil, nil
 	end
 	return x, z
+end
+
+local function cellUnderMouse(): (number?, number?)
+	if touching then
+		return tapX, tapZ
+	end
+	local mouse = UserInputService:GetMouseLocation()
+	return cellOnRay(camera:ViewportPointToRay(mouse.X, mouse.Y))
 end
 
 -- Faint squares on every cell where the room fits at the current rotation, plus the grid border.
@@ -153,8 +167,9 @@ local function onRender()
 	local legal = x ~= nil and z ~= nil and isLegal(x, z, rotation)
 	prompt.Visible = legal
 	if legal then
-		local mouse = UserInputService:GetMouseLocation()
-		prompt.Position = UDim2.fromOffset(mouse.X + 18, mouse.Y - 18)
+		local at = if touching then tapScreen else UserInputService:GetMouseLocation()
+		prompt.Position = UDim2.fromOffset(at.X + 18, at.Y - 18)
+		prompt.Text = if touching then "Tap again to place" else "Place (click)"
 	end
 end
 
@@ -166,8 +181,9 @@ local function openView()
 	camera.CameraType = Enum.CameraType.Scriptable
 	height = Config.Board.CameraHeight
 	hoverX, hoverZ = nil, nil
+	tapX, tapZ = nil, nil
 	drawMarkers()
-	hint.Text = BOARD_HINT
+	hint.Text = if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then TOUCH_HINT else BOARD_HINT
 	hint.Visible = true
 	RunService:BindToRenderStep(RENDER_STEP, Enum.RenderPriority.Camera.Value + 1, onRender)
 end
@@ -253,8 +269,26 @@ function BoardUI.init(gui: ScreenGui)
 	hintCorner.Parent = hint
 
 	UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
-		if viewing and not gameProcessed and input.UserInputType == Enum.UserInputType.MouseButton1 then
+		if not viewing or gameProcessed then
+			return
+		end
+		if input.UserInputType == Enum.UserInputType.MouseButton1 and not touching then
 			tryPlace()
+		elseif input.UserInputType == Enum.UserInputType.Touch then
+			-- First tap shows the room there; a second tap on the same cell places it.
+			touching = true
+			local x, z = cellOnRay(camera:ScreenPointToRay(input.Position.X, input.Position.Y))
+			tapScreen = Vector2.new(input.Position.X, input.Position.Y + GuiService:GetGuiInset().Y)
+			if x ~= nil and x == tapX and z == tapZ then
+				tryPlace()
+			else
+				tapX, tapZ = x, z
+			end
+		end
+	end)
+	UserInputService.InputChanged:Connect(function(input: InputObject)
+		if input.UserInputType == Enum.UserInputType.MouseMovement then
+			touching = false -- back on a mouse
 		end
 	end)
 	UserInputService.InputChanged:Connect(function(input: InputObject)

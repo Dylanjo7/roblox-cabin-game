@@ -27,6 +27,7 @@ local FinalEscape = {
 }
 
 local escapedNames: { string } = {}
+local escapedPlayers: { Player } = {}
 
 -- Where you end up when you get out: back on the path by the truck.
 local function outside(): CFrame
@@ -49,6 +50,7 @@ end
 local function escape(run: EventRun, player: Player, cell: MapGrid.Cell)
 	run.safe[player] = true
 	table.insert(escapedNames, player.DisplayName)
+	table.insert(escapedPlayers, player)
 	local character = player.Character
 	if character then
 		character:PivotTo(outside())
@@ -76,6 +78,7 @@ end
 
 function FinalEscape.start(run: EventRun)
 	table.clear(escapedNames)
+	table.clear(escapedPlayers)
 	local trueExit = Secrets.trueExit()
 	local prompts: { ProximityPrompt } = {}
 	run.data.prompts = prompts
@@ -147,6 +150,11 @@ end
 -- Display names of everyone who got out through the true exit in the last final escape.
 function FinalEscape.escaped(): { string }
 	return table.clone(escapedNames)
+end
+
+-- Everyone who got out in the last final escape.
+function FinalEscape.escapedPlayers(): { Player }
+	return table.clone(escapedPlayers)
 end
 
 return FinalEscape

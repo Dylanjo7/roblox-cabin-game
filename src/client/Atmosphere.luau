@@ -288,19 +288,19 @@ local function onClockChange(state: Types.PublicState)
 	local hollow = clock.hollow
 	-- (His steps are heard as his piece lands each one on the table: TablePieces.HollowStepped.)
 	if hollow ~= nil and lastHollow == nil then
-		Cutscene.beat(Story.Beats.enters)
+		Cutscene.beat(Story.Beats.enters, "beat_enters")
 	elseif hollow ~= nil and lastHollow ~= nil and hollow > lastHollow then
 		if hollow >= Config.Clock.MidnightStep and lastHollow < Config.Clock.MidnightStep then
-			Cutscene.beat(Story.Beats.midnight)
+			Cutscene.beat(Story.Beats.midnight, "beat_midnight")
 		else
-			Cutscene.beat(Story.Beats.moves)
+			Cutscene.beat(Story.Beats.moves, "beat_moves")
 		end
 	elseif hollow ~= nil and lastHollow ~= nil and hollow < lastHollow then
-		Cutscene.beat(Story.Beats.pushedBack)
+		Cutscene.beat(Story.Beats.pushedBack, "beat_pushedBack")
 	end
 	if clock.lastTurn and not lastLastTurn then
 		Audio.play("caught", 0.7)
-		task.delay(1.5, Cutscene.beat, Story.Beats.caught)
+		task.delay(1.5, Cutscene.beat, Story.Beats.caught, "beat_caught")
 	end
 	lastHollow = hollow
 	lastLastTurn = clock.lastTurn

@@ -4,7 +4,9 @@
 -- after. Shots: following the truck's headlights down the forest road; inside the cab beside the
 -- driver while he talks and the radio breaks up; a roadside shot as the truck passes someone
 -- standing in the trees; the headlights stutter and the engine dies; a light through the pines.
--- Dialogue is in Story.Trip. Click to skip.
+-- Dialogue is in Story.Trip; recorded lines (Config.Voice trip_1..) play with their subtitles,
+-- each waiting for the one before to finish (the drive runs on a little if it has to). Click to
+-- skip.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -226,9 +228,37 @@ function Trip.play()
 		skipped = true
 	end)
 
+	-- The recorded lines, loaded first (behind the black screen) so they can be timed.
+	local voices: { [number]: Sound } = {}
+	for i, entry in Story.Trip do
+		local sound = Audio.voiceSound(`trip_{i}`, entry.speaker == "Radio")
+		if sound then
+			voices[i] = sound
+		end
+	end
+	local deadline = os.clock() + 3
+	for _, sound in voices do
+		while not sound.IsLoaded and os.clock() < deadline do
+			task.wait()
+		end
+	end
+	-- When each line comes up and goes: at its time, or once the line before has been said.
+	local schedule: { { start: number, stop: number } } = {}
+	local free = 0
+	for i, entry in Story.Trip do
+		local following = Story.Trip[i + 1]
+		local sound = voices[i]
+		local spoken = if sound and sound.IsLoaded then sound.TimeLength else 0
+		local start = math.max(entry.at, free)
+		local shown = if entry.hold > 0 then entry.hold elseif following then following.at - entry.at - 0.3 else 3
+		schedule[i] = { start = start, stop = start + math.max(shown, spoken + 0.3) }
+		free = start + spoken + 0.25
+	end
+	local total = math.max(LENGTH, schedule[#schedule].stop + 1.6)
+
 	local figure: HollowManView.Handle? = nil
 	local nextLine = 1
-	local lineUntil = 0
+	local showing: { start: number, stop: number }? = nil
 	local cues: { [string]: boolean } = {}
 	local function cue(name: string, at: number, t: number, action: () -> ())
 		if t >= at and not cues[name] then
@@ -242,7 +272,7 @@ function Trip.play()
 	local started = os.clock()
 	while not skipped do
 		local t = os.clock() - started
-		if t >= LENGTH then
+		if t >= total then
 			break
 		end
 		local truckAt = truckCFrame(t)
@@ -279,7 +309,7 @@ function Trip.play()
 			task.delay(1.2, Audio.play, "ratchet", 0.6, nil, 0.35)
 			task.delay(STOPS_AT - DIES_AT, Audio.play, "step", 0.5, nil, 0.6)
 		end)
-		cue("fadeOut", LENGTH - 1.8, t, function()
+		cue("fadeOut", total - 1.8, t, function()
 			fade(black, { BackgroundTransparency = 0 }, 1.6)
 		end)
 
@@ -292,16 +322,20 @@ function Trip.play()
 			end
 		end
 
-		-- Subtitles.
+		-- Subtitles, and the recorded lines with them.
 		local entry = Story.Trip[nextLine]
-		if entry and t >= entry.at then
+		local slot = schedule[nextLine]
+		if entry and slot and t >= slot.start then
+			local sound = voices[nextLine]
+			if sound then
+				sound:Play()
+			end
 			nextLine += 1
+			showing = slot
 			subtitle.Text = `<font color="#B08C48">{string.upper(entry.speaker)}</font>   {entry.line}`
 			fade(subtitle, { TextTransparency = 0 }, 0.3)
-			local following = Story.Trip[nextLine]
-			lineUntil = if entry.hold > 0 then entry.at + entry.hold elseif following then following.at - 0.3 else entry.at + 3
-		elseif lineUntil > 0 and t >= lineUntil then
-			lineUntil = 0
+		elseif showing and t >= showing.stop then
+			showing = nil
 			fade(subtitle, { TextTransparency = 1 }, 0.4)
 		end
 
@@ -341,6 +375,9 @@ function Trip.play()
 	hint.TextTransparency = 1
 	if figure then
 		figure.destroy()
+	end
+	for _, sound in voices do
+		sound:Destroy()
 	end
 	folder:Destroy()
 	local character = localPlayer.Character

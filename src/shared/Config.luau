@@ -217,8 +217,9 @@ local Config = {
 		EndingLineSeconds = 4,
 	},
 
-	-- The two places of the experience (fill in from the Creator Dashboard once both are published).
-	-- 0 = not published yet: the lobby can't send trucks and the cabin stays on its own lobby.
+	-- The two places of the experience. Leave these 0: once the cabin is published as the
+	-- experience's second place, the lobby and the cabin find each other (shared/Places). Only
+	-- fill them in if the experience ever has more than two places.
 	Places = {
 		LobbyPlaceId = 0, -- the ranger station (the experience's start place)
 		GamePlaceId = 0, -- the cabin
@@ -256,6 +257,53 @@ local Config = {
 		FaceSeconds = 0.55, -- his face when you're caught in an event
 		JournalChance = 0.15, -- opening the Journal once he's past midnight
 	},
+
+	-- Badges (Creator Dashboard > your experience > Engagement > Badges). Paste each badge's id;
+	-- 0 = that badge is off.
+	Badges = {
+		FirstNight = 0, -- sat down for your first run
+		Escaped = 0, -- got out through the true exit
+		AllOut = 0, -- everyone in the run got out
+		Caught = 0, -- a run ended with him winning
+	} :: { [string]: number },
+
+	-- Recorded voice lines (see VOICE_LINES.md for the script). Upload each clip to Roblox as
+	-- audio, then paste its id here ("rbxassetid://123456" or just the number). An empty one is
+	-- silent: the line still shows as text.
+	VoiceVolume = 1,
+	Voice = {
+		-- The drive up (Story.Trip)
+		trip_1 = "",
+		trip_2 = "",
+		trip_3 = "", -- the radio: played through a radio filter
+		trip_4 = "",
+		trip_5 = "",
+		trip_6 = "",
+		-- Arriving by the dead truck (Story.ArrivalAfterTrip)
+		arrival_1 = "",
+		arrival_2 = "",
+		-- Inside, when the door slams (Story.Intro)
+		intro_1 = "",
+		intro_2 = "",
+		intro_3 = "",
+		intro_4 = "",
+		-- When he moves on the clock (Story.Beats)
+		beat_enters = "",
+		beat_moves = "",
+		beat_midnight = "",
+		beat_caught = "",
+		beat_pushedBack = "",
+		-- Endings (Story.Endings)
+		ending_caught_1 = "",
+		ending_caught_2 = "",
+		ending_escaped_1 = "",
+		ending_escaped_2 = "",
+		ending_escaped_3 = "",
+		ending_lost_1 = "",
+		ending_lost_2 = "",
+		ending_never_built_1 = "",
+		ending_never_built_2 = "",
+	} :: { [string]: string },
 
 	-- Robux items. Make them on the Creator Dashboard (your experience > Monetization) and put
 	-- their ids here; 0 = not set up yet (the item says so instead of opening a purchase).

@@ -140,6 +140,12 @@ RULES.md is the source of truth. MVP only for now.
   - Shop (`Config.Shop`, ids 0 until made on the Creator Dashboard): Lantern Colours pass (flame colours; Journal > Favours), Scare a Friend product (their screen; they're told who), Light a Candle product (memorial shelf at the ranger station, with your name). Lobby: Supplies at the front desk
   - Edit-mode preview: `require(game.ServerScriptService.Server.Preview).build()` / `.save()` / `.clear()`; room decorations saved to ServerStorage.RoomDecor follow their room every run
   - The drive up (`Trip`, `Story.Trip`): ~30 s cinematic with dialogue on arrival, skippable
+- [x] L. Mirror, voice, mobile, places, badges *(written, not yet run in Studio)*
+  - Mirror (Wrong Reflection) rebuilt: the room reflected across the glass and seen from your eye each frame (it shifts as you move), dim room lighting, no stray clock ticks or tags from the copy; rare scare: him behind you in it
+  - Voice lines: `Config.Voice` keys for every story line (trip, arrival, intro, beats, endings), script and recording/upload steps in VOICE_LINES.md; lines wait for their recording; the radio line gets a radio filter
+  - Mobile: on-screen Start turn / Rotate / Board / Journal buttons; tap once to preview a room on the board, tap again to place
+  - The lobby and cabin find each other (`shared/Places`): no place ids to paste
+  - Badges (`Config.Badges`, 0 = off): FirstNight, Escaped, AllOut, Caught
 - [ ] C2: clue signs in rooms (lullaby audio still to find)
 - [ ] C3: Journal (M)
 - Clue decisions: the 9 defaults agreed on 2026-10-28 (sign placement, sign shown only while active, second copy re-rolls the spot, Tally 3 rooms 1-5 marks, Doll always appears/fake frowns after 3rd true clue, shared Journal with "Record" prompt, manual cross-out, exits not in deck yet, faked mirror)
