@@ -68,6 +68,13 @@ local leftover = workspace:FindFirstChild("RangerStation")
 if leftover then
 	leftover:Destroy()
 end
+-- So is what a new place starts with: the grey Baseplate (it would cover the station's own
+-- ground and flicker through its floor) and its SpawnLocation (the station has its own).
+for _, inst in workspace:GetChildren() do
+	if inst.Name == "Baseplate" or inst:IsA("SpawnLocation") then
+		inst:Destroy()
+	end
+end
 local built = Station.build()
 LobbyShop.init(built)
 OldDriver.init(built.driver)

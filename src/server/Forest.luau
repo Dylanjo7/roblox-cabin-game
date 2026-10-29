@@ -117,8 +117,21 @@ function Forest.init()
 	folder.Name = "Forest"
 	folder.Parent = workspace
 
-	-- Dark forest floor instead of the bright default baseplate.
+	-- Dark forest floor instead of the bright default baseplate (and a floor of its own if the
+	-- place was started without one, so nobody falls out of the world by the truck).
 	local baseplate = workspace:FindFirstChild("Baseplate")
+	if not baseplate then
+		local ground = Instance.new("Part")
+		ground.Name = "Baseplate"
+		ground.Size = Vector3.new(2048, 16, 2048)
+		ground.CFrame = CFrame.new(0, -8, 0) -- top at y = 0, under the Parlor floor
+		ground.Anchored = true
+		ground.Locked = true
+		ground.TopSurface = Enum.SurfaceType.Smooth
+		ground.BottomSurface = Enum.SurfaceType.Smooth
+		ground.Parent = workspace
+		baseplate = ground
+	end
 	if baseplate and baseplate:IsA("BasePart") then
 		baseplate.Color = Config.Forest.Ground
 		baseplate.Material = Enum.Material.Ground
