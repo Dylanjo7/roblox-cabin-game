@@ -69,9 +69,9 @@ Rushing the clock keeps the Hollow Man behind you but leaves less time to find c
 
 ## Clues and the Altar
 
-Playing a Clue card puts it on top of the Altar stack, and only the top card is the active clue. If that clue is one of the three true clues, its sign appears in a random built room. If it isn't, nothing appears, and that's information too.
+Playing a Clue card puts it on top of the Altar stack, and only the top card is the active clue. If that clue is one of the three true clues, its sign appears in a random built room, straight away. If it isn't, nothing appears, and that's information too.
 
-- **Searching:** players get up from the table and walk the cabin to find the sign. If the sign picks a cell with no room yet, it shows up when a room is built there.
+- **Searching:** players get up from the table and walk the cabin to find the sign. It's always in a room that's already built (never the Crawlspace), so "nothing appeared" really does mean the clue is false (except The Doll, below).
 - **Revealed vs. discovered:** a clue is revealed when its sign appears in the world, and discovered when a player records it in the Journal (M key).
 - **Taking clues back:** at the start of a turn you can take any Clue card off the Altar instead of drawing. The card beneath it becomes the active clue. Taking a clue back protects it from an Altar Wipe.
 
@@ -81,7 +81,7 @@ Playing a Clue card puts it on top of the Altar stack, and only the top card is 
 | --- | --- |
 | Music Box | A faint lullaby starts playing somewhere. Follow the sound to a small open music box. |
 | Wet Footprints | Bare, wet footprints track across a floor and stop in the middle of a room. |
-| Wrong Reflection | A mirror shows the room with one thing missing or out of place. |
+| Rocking Chair | An empty rocking chair rocks by itself in one room, creaking loud enough to follow. |
 | Frost | One room's windows ice over and players' breath fogs inside it. |
 | Tally Marks | Scratch marks appear in 3 different rooms. Add them up: an odd total means Odd Tally, an even total means Even Tally. |
 | The Doll | A cloth doll sits facing the wall. It can be a decoy: if it's fake, its stitched smile turns into a frown once the third true clue is revealed. |
@@ -95,13 +95,13 @@ Eight Room cards are exit rooms, one copy each, and only one is the true exit in
 | Exit room | Doors | Clue 1 | Clue 2 | Clue 3 |
 | --- | --- | --- | --- | --- |
 | Boathouse | 1 | Music Box | Frost | Odd Tally |
-| Attic | 1 | Wet Footprints | Wrong Reflection | The Doll |
+| Root Cellar | 1 | Wet Footprints | Rocking Chair | The Doll |
 | Greenhouse | 2 | Frost | Wet Footprints | Even Tally |
-| Study | 2 | Music Box | Wrong Reflection | Even Tally |
+| Study | 2 | Music Box | Rocking Chair | Even Tally |
 | Chapel | 2 | The Doll | Frost | Music Box |
-| Workshop | 2 | Wet Footprints | Odd Tally | Wrong Reflection |
+| Workshop | 2 | Wet Footprints | Odd Tally | Rocking Chair |
 | Nursery | 3 | The Doll | Even Tally | Wet Footprints |
-| Mudroom | 3 | Music Box | Wrong Reflection | Frost |
+| Mudroom | 3 | Music Box | Rocking Chair | Frost |
 
 The true exit has to be built before 3:00 AM to escape through it, so holding exit cards and choosing when to play them is part of the strategy.
 
@@ -145,7 +145,7 @@ An Event card starts the moment it's drawn and pulls every player away from the 
 **Elimination**
 
 - A player who fails an event wakes up in the basement under the Crawlspace. Its door is barred until the event ends.
-- Every player caught lets the Hollow Man gain 30 minutes on the Candle (if he's on the track yet). The Candle itself doesn't move.
+- Every player caught lets the Hollow Man gain 30 minutes on the Candle (if he's on the track yet), up to 1 hour from any one event, however many are caught. The Candle itself doesn't move.
 - When the event ends the basement door opens, and eliminated players climb out and walk back to the table. The next turn waits until everyone is seated. Elimination costs time, not your spot in the run.
 
 ## 3 AM and the final escape
@@ -165,28 +165,29 @@ With fewer than three clues, players have to guess between the exits that still 
 
 ## Deck list
 
-The shuffled deck holds 64 cards (after the first playtest: fewer rooms, more clues; then two more events). The Crawlspace is set aside for setup and isn't shuffled in.
+A run's shuffled deck holds 49 cards. The rooms and the events are pools: each run deals in 10 of the 21 rooms (by number of doorways, so the cabin always has room to grow) and 6 of the 8 events, at random, so no two nights are the same. The Crawlspace is set aside for setup and isn't shuffled in.
 
-| Card | Type | Copies |
+| Card | Type | Copies in a run |
 | --- | --- | --- |
-| Hallway (2 doors, straight) | Room | 4 |
-| Corner (2 doors, L-shape) | Room | 4 |
-| T-Junction (3 doors) | Room | 3 |
-| Crossroads (4 doors) | Room | 2 |
-| Closet Room (1 door, extra hiding spots) | Room | 2 |
+| 2 of the 3 one-door rooms (Bathroom, Bedroom, Linen Closet) | Room | 2 |
+| 5 of the 12 two-door rooms (straight halls and corners) | Room | 5 |
+| 2 of the 4 three-door rooms | Room | 2 |
+| 1 of the 2 four-door rooms | Room | 1 |
 | Exit rooms (8 different, see Exit rooms) | Room | 8 |
 | Steady Hands | Progress | 3 |
-| Long Night | Progress | 3 |
+| Long Night | Progress | 4 |
 | Second Wind | Progress | 2 |
 | Hold the Line | Progress | 2 |
-| Peek | Progress | 2 |
+| Peek | Progress | 1 |
 | Cold Draft | Progress | 1 |
 | Shaking Floor | Progress | 1 |
 | Swap | Progress | 1 |
-| Music Box, Wet Footprints, Wrong Reflection, Frost, Tally Marks, The Doll | Clue | 3 each, 18 total |
-| Fuse Box, The Knock, Candlelight, He Walks, Rising Water, Lockdown, Don't Look Away, Hush | Event | 1 each, 8 total |
+| Music Box, Wet Footprints, Rocking Chair, Frost, Tally Marks, The Doll | Clue | 2 each, 12 total |
+| 6 of: Fuse Box, The Knock, Candlelight, He Walks, Rising Water, Lockdown, Don't Look Away, Hush | Event | 6 |
 
 If the deck runs out, players can only take clues off the Altar, and the Hollow Man moves an extra 60 minutes once.
+
+**Why these numbers.** They come from simulating thousands of runs of these rules (a bot playing sensibly: build exits as soon as they're drawn, test clues it hasn't tried, keep the Candle just ahead of him, then run for 3:00 AM once it knows the way out). The old 64-card deck was too big for the time he allows: the run is over by about turn 25-40, so the single true exit card often never came up (it was built in only about half of runs), and with 4 players a failed group event gave him 2 hours. On Normal the bot now wins about 55% of runs at any player count (it was about 30%), Hard about 35% and Nightmare about 23%. About 1 Normal run in 4 is still lost because the true exit never came out of the deck in time; Peek and Second Wind help dig for it.
 
 ## Build notes and MVP scope
 

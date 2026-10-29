@@ -56,7 +56,7 @@ Story.Notes = {
 	{ by = "Theo", text = "There's a game set out on the table. Cards, a candle, a carved board. Cal says it's somebody's idea of a joke. The front door won't open, so we're playing." },
 	{ by = "Jun", text = "The rooms aren't there until you play them. I put down a hallway and heard it build itself behind the wall. Like bones setting." },
 	{ by = "Mara", text = "He doesn't come in while the candle burns. He waits at the edge of the light and counts. Keep the cards moving. Don't let the clock stand still for him." },
-	{ by = "Theo", text = "The mirror in the sitting room is wrong. The chair by the fire isn't in it. Neither am I." },
+	{ by = "Theo", text = "The rocking chair started up by itself tonight. Creak, creak, nobody in it. Mara says it only does that when it's telling us something true." },
 	{ by = "Jun", text = "Scratches in three rooms. I added them up twice. Odd or even, the book says it matters. Everything in this house is counting." },
 	{ by = "Cal", text = "Jun walked through the wrong door at three. He was smiling. The pines just folded around him." },
 	{ by = "Mara", text = "Theo didn't come up from the basement this time. The door opened. He didn't." },

@@ -164,6 +164,15 @@ RULES.md is the source of truth. MVP only for now.
   - Difficulty (`Config.Difficulty`, server `Difficulty`): Normal / Hard / Nightmare per truck, changed at the sign by each pad, sent with the party; changes his turns per move, the hand size, event timers, his speed in events and how often scares come; shown in the Journal and told at setup
   - The old driver (`lobby/server/OldDriver`, `lobby/client/DriverView`): in a rocking chair by the station stove, head follows you, "Talk" for his lines (`Story.Driver`, voice keys driver_1..9)
   - Bug: the face scare's screen was lost on a respawn, and every scare after it with it (ResetOnSpawn)
+- [x] O. Pace tuning and the mirror clue *(written, not yet run in Studio)*
+  - Bug (playtest): the Wrong Reflection mirror locked players in with invisible walls. Its reflection was a copy of the room inside a SurfaceGui parented to the mirror, i.e. under Workspace, so every client's copy was physically there (solid, invisible). Removed with the clue (client `Reflections` deleted)
+  - New clue: Rocking Chair (an empty chair rocking by itself and creaking; `SignModels.rockingChair`, rocked by each client in `Spinners`, tag "RockingChair"). Same slots as Wrong Reflection in the exit table; Theo's note and the Nursery text changed to match
+  - Simulated thousands of runs of the real rules (Python model outside the repo: turns, draws, events ending your turn, the last turn, deck-out, the Attic, sign spots, room placement on the grid, the final escape). Findings: the 64-card deck was too big for the turns he allows (true exit built in about half the runs); with 4 players a failed group event gave him 2 hours; true clues often hid in unbuilt cells and looked false
+  - Deck per run: 49 cards. 10 of the 21 rooms (by doorway count, `Config.RoomsPerRun`), 8 exits, 15 Progress (22 steps: Long Night 4, Peek 1), 12 clues (2 each), 6 of the 8 events (`Config.EventsPerRun`), picked at random in `Deck.build`
+  - He gains at most 1 hour per event (`Config.EliminationMaxStepsPerEvent`), however many are caught
+  - Clue signs only go in built rooms, so a true clue always shows
+  - Hush mutes the clue signs' sounds while it runs (the Music Box plays the same lullaby)
+  - Result (bot): Normal ~55% wins at 1-4 players (was ~30%), Hard ~35%, Nightmare ~23%; a slower Hollow Man doesn't make runs longer (groups still go for 3:00 AM once they've solved it), only easier
 - [ ] C2: clue signs in rooms (lullaby audio still to find)
 - [ ] C3: Journal (M)
 - Clue decisions: the 9 defaults agreed on 2026-10-28 (sign placement, sign shown only while active, second copy re-rolls the spot, Tally 3 rooms 1-5 marks, Doll always appears/fake frowns after 3rd true clue, shared Journal with "Record" prompt, manual cross-out, exits not in deck yet, faked mirror)

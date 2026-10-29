@@ -14,7 +14,6 @@
 --   Your name: whispered, faint, at the edge of the screen.
 --   (And now and then, knocks in the walls; not a scare as such.)
 --   Bought: someone paid (Journal > Favours) to put his face on your screen; you're told who.
---   (The mirror: Reflections claims a slot here for him standing behind you in it.)
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -428,20 +427,6 @@ local function face(eventId: string?)
 	faceGui.Enabled = false
 	viewport.Visible = true
 	viewport:ClearAllChildren()
-	busy = false
-end
-
--- For scares run by other modules (the mirror): take the slot if a scare may happen now. Call
--- release() when it's over.
-function Scares.claim(): boolean
-	if not ready() then
-		return false
-	end
-	begin()
-	return true
-end
-
-function Scares.release()
 	busy = false
 end
 

@@ -59,6 +59,18 @@ function Hush.start(run: EventRun)
 	crackle.Parent = music
 	music.Parent = mouth
 
+	-- Nothing else in the house plays while it's listening (the Music Box sign plays the same
+	-- lullaby, and would lead you the wrong way).
+	local muted: { [Sound]: number } = {}
+	run.data.muted = muted
+	local signs = workspace:FindFirstChild("ClueSigns")
+	for _, inst in if signs then signs:GetDescendants() else {} do
+		if inst:IsA("Sound") then
+			muted[inst] = inst.Volume
+			inst.Volume = 0
+		end
+	end
+
 	local stopped = false
 	local prompt = EventKit.prompt(case, "Lift the needle", "Gramophone")
 	prompt.HoldDuration = cfg.StopSeconds
@@ -159,6 +171,11 @@ function Hush.onTimeout(run: EventRun): { Player }
 end
 
 function Hush.cleanup(run: EventRun)
+	for sound, volume in (run.data.muted or {}) :: { [Sound]: number } do
+		if sound.Parent then
+			sound.Volume = volume
+		end
+	end
 	EventKit.cleanup(run)
 end
 

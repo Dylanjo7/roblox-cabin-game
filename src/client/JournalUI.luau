@@ -121,10 +121,11 @@ end
 local function rulesTwo(left: Frame, right: Frame)
 	local turns = if difficulty then difficulty.turnsPerMove else Config.Difficulty.Levels[Config.Difficulty.Default].turnsPerMove
 	local penalty = Config.EliminationHollowSteps * Config.Clock.StepMinutes
+	local most = Config.EliminationMaxStepsPerEvent * Config.Clock.StepMinutes
 	heading(left, "Him")
 	para(left, `His piece follows our Candle round the table. Every {turns} turns he takes a step: half an hour, then a whole hour at a time once he's past midnight.`)
 	para(left, "If he reaches the Candle you get <b>one last turn</b>, and the Candle has to move before it ends. If it doesn't, that's the end of you. Keep a Progress card back for that turn. Taking a clue off the Altar is safer than drawing blind.")
-	para(left, `In an event, if you fail you wake up in the <b>basement</b>. The door stays barred until it's over up there. Every one of us he gets lets him gain {penalty} minutes on the Candle.`)
+	para(left, `In an event, if you fail you wake up in the <b>basement</b>. The door stays barred until it's over up there. Every one of us he gets lets him gain {penalty} minutes on the Candle, up to {most} minutes an event.`)
 	para(left, "The Candle only moves when we play a card. Nothing else moves it: not the turns, not him.")
 	add(text(left, "<i>He doesn't flicker the lights unless he's close. If they flicker, move.</i>", 14, BODY, RED))
 
@@ -142,7 +143,7 @@ local function cluePages(left: Frame, right: Frame)
 	local marks = journal.marks or {}
 	heading(left, "What we found")
 	add(text(left, "<i>Click a clue: ✓ found, ✗ ruled out, click again to clear.</i>", 13, BODY, FADED))
-	for _, id in { "music_box", "wet_footprints", "wrong_reflection", "frost", "odd_tally", "even_tally", "the_doll" } do
+	for _, id in { "music_box", "wet_footprints", "rocking_chair", "frost", "odd_tally", "even_tally", "the_doll" } do
 		local mark = marks[id]
 		local row = Instance.new("TextButton")
 		add(row)

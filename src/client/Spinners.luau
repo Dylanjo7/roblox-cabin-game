@@ -2,7 +2,8 @@
 -- Things waiting to be found in an event (tag "EventSpin": the key, the fuse) bob gently and
 -- turn where they float, drawn here on each client so it's smooth. The server removes the tag
 -- when someone picks one up. Records on a turntable (tag "EventTurn") go round in place while
--- their Playing attribute is true.
+-- their Playing attribute is true. The Rocking Chair clue (tag "RockingChair") rocks on its
+-- runners, about its pivot, with nobody in it.
 
 local CollectionService = game:GetService("CollectionService")
 local RunService = game:GetService("RunService")
@@ -10,9 +11,12 @@ local RunService = game:GetService("RunService")
 local Spinners = {}
 
 local RECORD_SPEED = 3.5 -- radians a second: about 33 rpm
+local ROCK_ANGLE = math.rad(9)
+local ROCK_SPEED = 2.2 -- radians a second of its swing: one rock about every 3 seconds
 
 local spinning: { [Instance]: CFrame } = {} -- each one's resting pivot
 local turning: { [Instance]: { rest: CFrame, angle: number } } = {}
+local rocking: { [Instance]: { rest: CFrame, phase: number } } = {}
 
 local function add(inst: Instance)
 	if inst:IsA("PVInstance") then
@@ -23,6 +27,12 @@ end
 local function addTurn(inst: Instance)
 	if inst:IsA("PVInstance") then
 		turning[inst] = { rest = inst:GetPivot(), angle = 0 }
+	end
+end
+
+local function addRock(inst: Instance)
+	if inst:IsA("PVInstance") then
+		rocking[inst] = { rest = inst:GetPivot(), phase = math.random() * math.pi * 2 }
 	end
 end
 
@@ -40,6 +50,13 @@ function Spinners.init()
 	CollectionService:GetInstanceAddedSignal("EventTurn"):Connect(addTurn)
 	CollectionService:GetInstanceRemovedSignal("EventTurn"):Connect(function(inst: Instance)
 		turning[inst] = nil
+	end)
+	for _, inst in CollectionService:GetTagged("RockingChair") do
+		addRock(inst)
+	end
+	CollectionService:GetInstanceAddedSignal("RockingChair"):Connect(addRock)
+	CollectionService:GetInstanceRemovedSignal("RockingChair"):Connect(function(inst: Instance)
+		rocking[inst] = nil
 	end)
 	RunService.RenderStepped:Connect(function(dt: number)
 		local t = os.clock()
@@ -61,6 +78,13 @@ function Spinners.init()
 				turn.angle += dt * RECORD_SPEED
 				;(inst :: PVInstance):PivotTo(CFrame.new(turn.rest.Position) * CFrame.Angles(0, -turn.angle, 0) * turn.rest.Rotation)
 			end
+		end
+		for inst, rock in rocking do
+			if not inst.Parent then
+				rocking[inst] = nil
+				continue
+			end
+			;(inst :: PVInstance):PivotTo(rock.rest * CFrame.Angles(math.sin(t * ROCK_SPEED + rock.phase) * ROCK_ANGLE, 0, 0))
 		end
 	end)
 end

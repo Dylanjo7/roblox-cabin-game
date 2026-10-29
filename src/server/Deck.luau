@@ -26,14 +26,45 @@ function Deck.newCard(id: string): Card
 	return { uid = nextUid, id = id }
 end
 
+-- Up to n of these, picked at random.
+local function pick(list: { string }, n: number): { string }
+	local pool = table.clone(list)
+	local out = {}
+	for _ = 1, math.min(n, #pool) do
+		table.insert(out, table.remove(pool, rng:NextInteger(1, #pool)))
+	end
+	return out
+end
+
+-- A fresh deck for a run: every card in Config.CardCopies, except that the rooms (not the exit
+-- rooms) and the events are pools, and only Config.RoomsPerRun rooms (by number of doorways)
+-- and Config.EventsPerRun events go in, picked at random.
 function Deck.build()
 	cards = {}
+	local rooms: { [number]: { string } } = {}
+	local events: { string } = {}
 	for _, def in CardData.all() do
 		if def.inDeck and Config.DeckTypes[def.type] then
 			for _ = 1, Config.CardCopies[def.id] or 0 do
-				table.insert(cards, Deck.newCard(def.id))
+				if def.type == "Room" and not def.exit then
+					local doors = #(def.doors or {})
+					rooms[doors] = rooms[doors] or {}
+					table.insert(rooms[doors], def.id)
+				elseif def.type == "Event" then
+					table.insert(events, def.id)
+				else
+					table.insert(cards, Deck.newCard(def.id))
+				end
 			end
 		end
+	end
+	for doors, ids in rooms do
+		for _, id in pick(ids, Config.RoomsPerRun[doors] or #ids) do
+			table.insert(cards, Deck.newCard(id))
+		end
+	end
+	for _, id in pick(events, Config.EventsPerRun) do
+		table.insert(cards, Deck.newCard(id))
 	end
 	Deck.shuffle()
 end

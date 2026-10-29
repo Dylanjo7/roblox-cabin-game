@@ -85,31 +85,33 @@ local Config = {
 	HoldTheLinePushSteps = 1,
 
 	-- Copies of each card in the shuffled deck (the Crawlspace is set aside, not shuffled in)
+	-- Tuned by simulating thousands of runs of these rules (TODO.md, section O): a run's deck is
+	-- about 49 cards, so the true exit usually turns up before 3:00 AM.
 	CardCopies = {
-		-- Rooms: 15 of the 21 (playtest: too many rooms, too few clues). Door shapes 4 straight /
-		-- 4 corner / 3 three-way / 2 four-way / 2 single. Set a 0 back to 1 to put a room back in.
+		-- Rooms: the pool. Each run uses RoomsPerRun of them, picked at random, so every room
+		-- turns up but no two cabins are the same. Set one to 0 to take it out.
 		front_hall = 1,
 		back_hall = 1,
 		gallery = 1,
-		pantry = 0,
+		pantry = 1,
 		stair_hall = 1,
-		sun_porch = 0,
+		sun_porch = 1,
 		kitchen = 1,
 		dining_room = 1,
 		living_room = 1,
-		laundry_room = 0,
-		sewing_room = 0,
+		laundry_room = 1,
+		sewing_room = 1,
 		library = 1,
 		den = 1,
 		sitting_room = 1,
 		music_room = 1,
-		game_room = 0,
+		game_room = 1,
 		grand_hall = 1,
 		foyer = 1,
 		bathroom = 1, -- unlocks the Attic
-		bedroom = 0,
+		bedroom = 1,
 		linen_closet = 1,
-		-- Exit rooms: one of each.
+		-- Exit rooms: one of each, every run.
 		boathouse = 1,
 		root_cellar = 1,
 		greenhouse = 1,
@@ -118,15 +120,16 @@ local Config = {
 		workshop = 1,
 		nursery = 1,
 		mudroom = 1,
+		-- Progress: 15 cards, 22 steps (the Candle needs 12, plus whatever he gains).
 		steady_hands = 3,
-		long_night = 3,
+		long_night = 4,
 		second_wind = 2,
 		hold_the_line = 2,
-		peek = 2,
+		peek = 1,
 		cold_draft = 1,
 		shaking_floor = 1,
 		swap = 1,
-		-- Events: 1 each (RULES.md's six, plus Don't Look Away and Hush).
+		-- Events: the pool. Each run uses EventsPerRun of them, picked at random.
 		fuse_box = 1,
 		candlelight = 1,
 		rising_water = 1,
@@ -135,14 +138,19 @@ local Config = {
 		he_walks = 1,
 		dont_look = 1,
 		hush = 1,
-		-- Clues: 3 each (18; RULES.md had 2 each, playtest wanted more).
-		music_box = 3,
-		wet_footprints = 3,
-		wrong_reflection = 3,
-		frost = 3,
-		tally_marks = 3,
-		the_doll = 3,
+		-- Clues: 2 each (12). Every true clue's sign now shows (signs only go in built rooms), so
+		-- these show more than 3 each did before.
+		music_box = 2,
+		wet_footprints = 2,
+		rocking_chair = 2,
+		frost = 2,
+		tally_marks = 2,
+		the_doll = 2,
 	} :: { [string]: number },
+	-- Rooms in a run, by how many doorways they have (10 in all: 2 one-door, 5 two-door, 2
+	-- three-door, 1 four-door). Picked from the rooms above at random each run.
+	RoomsPerRun = { [1] = 2, [2] = 5, [3] = 2, [4] = 1 } :: { [number]: number },
+	EventsPerRun = 6, -- events in a run, picked at random from the ones above
 	-- Not in the deck yet
 	ExitCopiesEach = 1,
 
@@ -159,8 +167,10 @@ local Config = {
 		hush = 70,
 	} :: { [string]: number },
 	-- Each player caught in an event lets the Hollow Man gain this many steps (30 min each) on the
-	-- Candle. The Candle itself never moves for events: only cards move it.
+	-- Candle, up to EliminationMaxStepsPerEvent from any one event (with 4 players, a failed
+	-- group task used to cost 2 hours). The Candle itself never moves for events: only cards.
 	EliminationHollowSteps = 1,
+	EliminationMaxStepsPerEvent = 2,
 	Events = {
 		ResultSeconds = 3, -- pause on the result before everyone returns to their seats
 		ItemSpread = 12, -- event items spawn up to this many studs from a room's centre

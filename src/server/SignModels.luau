@@ -3,8 +3,8 @@
 -- named "PromptAnchor" where the "Record in Journal" prompt goes.
 --   Music Box: a small open box with a dancer, playing a faint lullaby you can follow.
 --   Wet Footprints: bare wet prints from a doorway that stop dead in the middle of the room.
---   Wrong Reflection: a mirror on the wall; the client renders it showing the room with one
---     piece of furniture missing (tag "ReflectionMirror", attributes Room and Missing).
+--   Rocking Chair: an empty rocking chair on open floor, rocking by itself (tag "RockingChair";
+--     each client rocks it) and creaking, loud enough to follow.
 --   Frost: the room's windows ice over, frost creeps across the floor, a cold light; the client
 --     makes your breath fog in there (room attribute "Frost").
 --   Tally Marks: groups of scratches gouged into a wall.
@@ -109,14 +109,46 @@ function SignModels.footprints(parent: Instance, from: Vector3, to: Vector3): Mo
 	return m
 end
 
-function SignModels.mirror(parent: Instance, at: CFrame, roomName: string, missing: string): Model
-	local m = model(parent, "WrongReflection")
-	part(m, "Frame", Vector3.new(3.4, 5.4, 0.25), at, Color3.fromRGB(130, 100, 44), Enum.Material.Metal)
-	-- Plain material: the client draws the reflection over it (Glass would hide the drawing).
-	local glass = part(m, "PromptAnchor", Vector3.new(2.8, 4.8, 0.05), at * CFrame.new(0, 0, -0.15), Color3.fromRGB(60, 64, 66), Enum.Material.SmoothPlastic)
-	glass:SetAttribute("Room", roomName)
-	glass:SetAttribute("Missing", missing)
-	CollectionService:AddTag(glass, "ReflectionMirror")
+-- An empty rocking chair. `at` is the floor under the middle of its rockers (its pivot, the
+-- point it rocks about); it faces -Z.
+function SignModels.rockingChair(parent: Instance, at: CFrame): Model
+	local m = model(parent, "RockingChair")
+	local wood = Color3.fromRGB(92, 62, 40)
+	local lean = math.tan(math.rad(12))
+	for _, x in { -0.9, 0.9 } do
+		-- A runner each side, curling up at both ends.
+		part(m, "Rocker", Vector3.new(0.16, 0.2, 2.4), at * CFrame.new(x, 0.1, 0), wood, Enum.Material.Wood)
+		for _, z in { -1, 1 } do
+			part(m, "RockerTip", Vector3.new(0.16, 0.18, 0.7), at * CFrame.new(x, 0.22, z * 1.45) * CFrame.Angles(math.rad(z * 24), 0, 0), wood, Enum.Material.Wood)
+		end
+		for _, z in { -0.75, 0.75 } do
+			part(m, "Leg", Vector3.new(0.17, 1.55, 0.17), at * CFrame.new(x, 0.95, z), wood, Enum.Material.Wood)
+		end
+		part(m, "Upright", Vector3.new(0.2, 3.4, 0.2), at * CFrame.new(x, 3.35, 0.9 + 1.55 * lean) * CFrame.Angles(math.rad(12), 0, 0), wood, Enum.Material.Wood)
+		part(m, "Armrest", Vector3.new(0.22, 0.16, 1.9), at * CFrame.new(x * 1.06, 2.7, 0), wood, Enum.Material.Wood)
+		part(m, "ArmPost", Vector3.new(0.14, 0.95, 0.14), at * CFrame.new(x * 1.06, 2.15, -0.8), wood, Enum.Material.Wood)
+	end
+	local seat = part(m, "PromptAnchor", Vector3.new(1.95, 0.22, 1.8), at * CFrame.new(0, 1.8, 0), wood, Enum.Material.Wood)
+	seat.CanCollide = true
+	-- Spindles up the back, leaning back with it, and a top rail.
+	for i = -2, 2 do
+		part(m, "Spindle", Vector3.new(0.1, 2.6, 0.1), at * CFrame.new(i * 0.34, 3.3, 0.9 + 1.5 * lean) * CFrame.Angles(math.rad(12), 0, 0), wood, Enum.Material.Wood)
+	end
+	part(m, "TopRail", Vector3.new(2.0, 0.34, 0.16), at * CFrame.new(0, 4.75, 0.9 + 2.95 * lean) * CFrame.Angles(math.rad(12), 0, 0), wood, Enum.Material.Wood)
+	-- An old blanket thrown over one arm.
+	part(m, "Blanket", Vector3.new(0.5, 1.2, 1.4), at * CFrame.new(1.05, 2.4, 0.1), Color3.fromRGB(110, 36, 34), Enum.Material.Fabric)
+	m.WorldPivot = at
+	local creak = Instance.new("Sound")
+	creak.SoundId = Config.Sounds.creak or ""
+	creak.Looped = true
+	creak.Volume = 0.5
+	creak.PlaybackSpeed = 0.85
+	creak.RollOffMode = Enum.RollOffMode.InverseTapered
+	creak.RollOffMinDistance = 6
+	creak.RollOffMaxDistance = 90
+	creak.Parent = seat
+	creak:Play()
+	CollectionService:AddTag(m, "RockingChair")
 	return m
 end
 

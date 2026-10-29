@@ -2,9 +2,10 @@
 -- Runs Event cards. An event starts the moment it's drawn: everyone is stood up from the table,
 -- a timer runs, and the event's module decides who fails. A player who fails wakes up in the
 -- basement under the Crawlspace (see Basement), locked in until the event ends, and every
--- elimination lets the Hollow Man gain on the Candle (the Candle itself only moves for cards). When the event ends, the survivors go back to their
--- seats and the basement door opens for the eliminated to walk back up (elimination costs
--- time, not your spot in the run).
+-- elimination lets the Hollow Man gain on the Candle, up to Config.EliminationMaxStepsPerEvent
+-- an event (the Candle itself only moves for cards). When the event ends, the survivors go back
+-- to their seats and the basement door opens for the eliminated to walk back up (elimination
+-- costs time, not your spot in the run).
 -- Each event lives in its own module under Events/ and only sees the EventRun it's given.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -84,8 +85,13 @@ local function eliminate(run: EventRun, player: Player)
 			Remotes.notify(p, `{player.DisplayName} was eliminated.`)
 		end
 	end
-	if not EVENTS[run.id].noPenalty and Clock.hollowGains(Config.EliminationHollowSteps) then
-		run.data.hollowGained = (run.data.hollowGained or 0) + Config.EliminationHollowSteps
+	if not EVENTS[run.id].noPenalty then
+		-- He gains for each player caught, but only so much from one event.
+		local gained = run.data.hollowGained or 0
+		local steps = math.min(Config.EliminationHollowSteps, Config.EliminationMaxStepsPerEvent - gained)
+		if steps > 0 and Clock.hollowGains(steps) then
+			run.data.hollowGained = gained + steps
+		end
 	end
 	StateSync.broadcast()
 end

@@ -85,7 +85,7 @@ local EXITS: { CardDef } = {
 	exitRoom("study", "Study", CORNER, "Exit room. A letter on the desk, addressed to you. The door out is boarded.", OAK, Color3.fromRGB(70, 52, 40)),
 	exitRoom("chapel", "Chapel", STRAIGHT, "Exit room. Pews facing the wrong way. A side door, barred.", PINE, Color3.fromRGB(96, 90, 80)),
 	exitRoom("workshop", "Workshop", CORNER, "Exit room. Tools hung in neat outlines, one missing. The yard door is nailed.", DARK, Color3.fromRGB(80, 70, 56)),
-	exitRoom("nursery", "Nursery", THREE, "Exit room. The rocking chair is still moving. Its outside door is boarded.", PINE, Color3.fromRGB(110, 92, 96)),
+	exitRoom("nursery", "Nursery", THREE, "Exit room. The mobile over the cot is still turning. Its outside door is boarded.", PINE, Color3.fromRGB(110, 92, 96)),
 	exitRoom("mudroom", "Mudroom", THREE, "Exit room. Boots lined up by a back door that has been nailed shut.", OAK, Color3.fromRGB(86, 80, 66), Vector2.new(30, 30)),
 }
 
@@ -238,11 +238,11 @@ local CARDS: { CardDef } = {
 		text = "Bare, wet footprints track across a floor and stop in the middle of a room.",
 	},
 	{
-		id = "wrong_reflection",
-		name = "Wrong Reflection",
+		id = "rocking_chair",
+		name = "Rocking Chair",
 		type = "Clue",
 		inDeck = true,
-		text = "A mirror shows the room with one thing missing or out of place.",
+		text = "An empty rocking chair rocks by itself in one room, creaking. Follow the sound.",
 	},
 	{
 		id = "frost",

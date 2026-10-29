@@ -3,8 +3,9 @@
 -- true clues, its sign appears in the cabin; if not, nothing appears (that's information too),
 -- except The Doll, which always appears (a fake one is a decoy that frowns once the third
 -- different true clue has been revealed).
---   - A sign goes in a random built room (never the Crawlspace) or an empty spot just past an
---     open doorway; there it waits and appears when a room is built.
+--   - A sign goes in a random room that's already built (never the Crawlspace), so a true clue
+--     always shows straight away. (It used to be able to wait in an unbuilt spot, which made a
+--     true clue look false.)
 --   - It shows only while its card is the active clue; covered, it hides; uncovered again, it
 --     comes back in the same place. Once the card leaves the Altar it's gone for good. A second
 --     copy of the same clue picks a new spot.
@@ -59,24 +60,12 @@ local function revealedCount(): number
 	return n
 end
 
--- Built rooms a sign can go in, plus empty cells just past open doorways.
-local function candidateCells(includeEmpty: boolean): { { x: number, z: number } }
+-- Built rooms a sign can go in.
+local function candidateCells(): { { x: number, z: number } }
 	local out = {}
-	local seen: { [string]: boolean } = {}
 	for _, cell in MapGrid.all() do
 		if cell.id ~= "crawlspace" then
 			table.insert(out, { x = cell.x, z = cell.z })
-		end
-		if includeEmpty and cell.buildable then
-			for dir in cell.doors do
-				local dx, dz = RoomShapes.offset(dir :: RoomShapes.Dir)
-				local x, z = cell.x + dx, cell.z + dz
-				local k = MapGrid.key(x, z)
-				if not MapGrid.get(x, z) and MapGrid.inBounds(x, z) and not seen[k] then
-					seen[k] = true
-					table.insert(out, { x = x, z = z })
-				end
-			end
 		end
 	end
 	return out
@@ -89,7 +78,7 @@ local function newSign(card: Card): Sign
 		return sign -- not a true clue: nothing appears
 	end
 	if card.id == "tally_marks" then
-		local rooms = candidateCells(false)
+		local rooms = candidateCells()
 		local picked = {}
 		for _ = 1, math.min(3, #rooms) do
 			table.insert(picked, table.remove(rooms, rng:NextInteger(1, #rooms)))
@@ -107,7 +96,7 @@ local function newSign(card: Card): Sign
 			last.count = if last.count < Config.Events.TallyMax then last.count + 1 else last.count - 1
 		end
 	else
-		local cells = candidateCells(true)
+		local cells = candidateCells()
 		local cell = cells[rng:NextInteger(1, #cells)]
 		table.insert(sign.spots, { x = cell.x, z = cell.z, seed = rng:NextInteger(1, 1e6) })
 	end
@@ -169,17 +158,10 @@ local function buildSpot(sign: Sign, spot: Spot)
 		-- They stop somewhere you can see, near the middle (not under the table).
 		local to = Spots.clear(cell, signRng, 1.2, 7)
 		m = SignModels.footprints(folder, from, to)
-	elseif id == "wrong_reflection" then
-		-- Something from this room's furniture that the mirror won't show.
-		local props = room:FindFirstChild("Props")
-		local options = {}
-		for _, child in if props then props:GetChildren() else {} do
-			if child:IsA("Model") and child.Name ~= "Rug" then
-				table.insert(options, child.Name)
-			end
-		end
-		local missing = if #options > 0 then options[signRng:NextInteger(1, #options)] else ""
-		m = SignModels.mirror(folder, clearWall(6.5, Vector3.new(3.8, 5.8, 1.5)), room.Name, missing)
+	elseif id == "rocking_chair" then
+		-- On open floor, turned any way, rocking by itself.
+		local at = CFrame.new(Spots.clear(cell, signRng, 1.8)) * CFrame.Angles(0, signRng:NextNumber(0, 6), 0)
+		m = SignModels.rockingChair(folder, at)
 	elseif id == "frost" then
 		local thaw
 		m, thaw = SignModels.frost(folder, room, centre, half, signRng)
@@ -267,7 +249,6 @@ function ClueSigns.init()
 	folder.Name = "ClueSigns"
 	folder.Parent = workspace
 	Altar.Changed:Connect(refresh)
-	MapGrid.Changed:Connect(refresh) -- a sign waiting for an unbuilt spot appears when it's built
 end
 
 return ClueSigns
