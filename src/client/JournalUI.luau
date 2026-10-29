@@ -1,8 +1,8 @@
 --!strict
 -- The Journal (M): an old notebook left in the cabin by the last people who tried to leave.
--- The first pages are the rules, in their hand. After those, the group's own pages: the 7 clue
+-- The first pages are the rules, in their hand. After those, the group's own pages: the 6 clue
 -- results to tick off (click to cycle found / ruled out / unknown, shared with everyone; recording
--- a sign marks it found), the signs recorded so far with the tally sum, and the 8 ways out with
+-- a sign marks it found), the signs recorded so far, and the 8 ways out with
 -- their three clues. Ways out that no longer fit what you've marked fade; click one to cross it
 -- out for the whole group. The last page, "Favours", is where the Robux items are (Config.Shop):
 -- your lantern's flame colour, and scaring a friend. Turn pages with the arrows at the bottom or
@@ -131,7 +131,7 @@ local function rulesTwo(left: Frame, right: Frame)
 
 	heading(right, "Three o'clock")
 	para(right, "When the Candle reaches three, every <b>way out</b> that's been built unseals its outside door. Only one of them is real. The rest are his.")
-	para(right, `He comes in by the front door and hunts. You'll have about {Config.EventSeconds.final_escape} seconds to get to the door you believe in.`)
+	para(right, `He comes in by the front door, waits a moment, then hunts. You'll have about {Config.EventSeconds.final_escape} seconds to get to the door you believe in. It glows; press <b>F</b> at it to go through.`)
 	para(right, "The way out has to be <b>built</b> before three. Hold on to those cards, and play them in time.")
 	para(right, "<b>M</b> this book   <b>T</b> start your turn   <b>R</b> turn a room   <b>B</b> the board   <b>1</b> your lantern")
 end
@@ -143,7 +143,7 @@ local function cluePages(left: Frame, right: Frame)
 	local marks = journal.marks or {}
 	heading(left, "What we found")
 	add(text(left, "<i>Click a clue: ✓ found, ✗ ruled out, click again to clear.</i>", 13, BODY, FADED))
-	for _, id in { "music_box", "wet_footprints", "rocking_chair", "frost", "odd_tally", "even_tally", "the_doll" } do
+	for _, id in { "music_box", "wet_footprints", "rocking_chair", "frost", "tally_marks", "the_doll" } do
 		local mark = marks[id]
 		local row = Instance.new("TextButton")
 		add(row)
@@ -168,18 +168,8 @@ local function cluePages(left: Frame, right: Frame)
 	if #journal.entries == 0 then
 		add(text(left, "<i>Nothing yet. When a clue's sign appears in the cabin, find it and write it down here.</i>", 13, BODY, FADED))
 	end
-	local tallies = {}
-	local sum = 0
 	for _, entry in journal.entries do
 		add(text(left, `{entry.label} · {entry.room}  <font color="#968870">({entry.by})</font>`, 13, BODY, INK))
-		if entry.clue == "tally" then
-			table.insert(tallies, tostring(entry.count or 0))
-			sum += entry.count or 0
-		end
-	end
-	if #tallies > 0 then
-		local parity = if sum % 2 == 0 then "even" else "odd"
-		add(text(left, `<i>Scratches: {table.concat(tallies, " + ")} = {sum} ({parity} so far)</i>`, 13, BODY, INK))
 	end
 
 	-- The ways out. One fits if nothing it needs is ruled out and it has every clue found.

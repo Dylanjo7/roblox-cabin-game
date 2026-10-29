@@ -139,6 +139,14 @@ function Table.seatPlayer(player: Player, index: number?): boolean
 	local seat = seats[chosen]
 	root.Anchored = false
 	seat.Disabled = false
+	if humanoid.SeatPart and humanoid.SeatPart ~= seat then
+		-- Still half-attached to something else: let go of it first.
+		local weld = humanoid.SeatPart:FindFirstChild("SeatWeld")
+		if weld then
+			weld:Destroy()
+		end
+	end
+	humanoid.Sit = false
 	character:PivotTo(seat.CFrame * CFrame.new(0, 3, 0))
 	seat:Sit(humanoid)
 	return true
@@ -537,7 +545,23 @@ function Table.build()
 		else
 			seat.Transparency = 1 -- the chair model shows; this only seats you
 		end
+		-- Walking into a chair sits you, but there's always a prompt as well (E), which can't miss:
+		-- it works straight after someone got up, and puts you right if your character is stuck.
+		local sit = Instance.new("ProximityPrompt")
+		sit.Name = "SitPrompt"
+		sit.ActionText = "Sit"
+		sit.ObjectText = "Chair"
+		sit.HoldDuration = 0
+		sit.MaxActivationDistance = 7
+		sit.RequiresLineOfSight = false
+		sit.Parent = seat
+		sit.Triggered:Connect(function(player: Player)
+			if Table.seatOf(player) == nil then
+				Table.seatPlayer(player, i)
+			end
+		end)
 		seat:GetPropertyChangedSignal("Occupant"):Connect(function()
+			sit.Enabled = seat.Occupant == nil
 			if not seat.Occupant then
 				-- Jumping off lands you back on the seat; don't let it grab you straight away.
 				seat.Disabled = true

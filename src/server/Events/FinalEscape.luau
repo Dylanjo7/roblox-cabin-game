@@ -117,11 +117,32 @@ function FinalEscape.start(run: EventRun)
 					end)
 				end
 				EventKit.sound("creak", panel, 0.8)
+				-- Easy to find and impossible to miss: cold night light round the door, a label once
+				-- you're in the room, and its own key (F), always shown, so a wardrobe's "Hide" or a
+				-- sign's "Record" prompt next to it can't take its place.
+				local glow = Instance.new("PointLight")
+				glow.Color = Color3.fromRGB(170, 195, 255)
+				glow.Brightness = 1.6
+				glow.Range = 16
+				glow.Parent = panel
+				local label = EventKit.marker(panel, "Door out", Color3.fromRGB(200, 215, 255))
+				local tag = label.Parent :: BillboardGui
+				tag.MaxDistance = 30
+				tag.Enabled = false
 				local prompt = EventKit.prompt(panel, "Go through", `{CardData.get(cell.id).name} door`)
+				prompt.KeyboardKeyCode = Enum.KeyCode.F
+				prompt.GamepadKeyCode = Enum.KeyCode.ButtonY
+				prompt.Exclusivity = Enum.ProximityPromptExclusivity.AlwaysShow
+				prompt.MaxActivationDistance = 12
+				prompt.HoldDuration = 0.5
+				run.data.doorTags = run.data.doorTags or {}
+				table.insert(run.data.doorTags, tag)
+				run.data.doorLights = run.data.doorLights or {}
+				table.insert(run.data.doorLights, glow)
 				prompt.Enabled = false
 				prompt.Triggered:Connect(function(player: Player)
-					if not run.isActive(player) then
-						return
+					if not run.isActive(player) or EventKit.isSeized(run, player) then
+						return -- (he has them)
 					end
 					if trueExit and cell.id == trueExit.id then
 						escape(run, player, cell)
@@ -147,14 +168,20 @@ function FinalEscape.start(run: EventRun)
 		for _, prompt in prompts do
 			prompt.Enabled = true
 		end
+		for _, tag in (run.data.doorTags or {}) :: { BillboardGui } do
+			tag.Enabled = true
+		end
 		if count == 0 then
 			EventKit.notifyAll(run, "3:00 AM. Somewhere a lock turns... but no exit room was ever built.")
 		else
-			EventKit.notifyAll(run, `3:00 AM. {count} outside door{if count == 1 then "" else "s"} unsealed. Only one leads out. Choose.`)
+			EventKit.notifyAll(run, `3:00 AM. {count} outside door{if count == 1 then "" else "s"} unsealed. Only one leads out. Get to it and press F.`)
 		end
-		-- He's in by the front door, and he comes for you.
+		-- He's in by the front door. He waits there a moment, then he comes for you.
+		local cfg = Config.Events.HeWalks
 		run.data.startCell = MapGrid.get(0, 0)
 		run.data.startAt = RoomShapes.hollowEntry()
+		run.data.holdSeconds = cfg.FinalHoldSeconds
+		run.data.speedScale = cfg.FinalSpeed
 		HeWalks.start(run)
 	end)
 end
@@ -173,6 +200,12 @@ end
 function FinalEscape.cleanup(run: EventRun)
 	for _, prompt in (run.data.prompts or {}) :: { ProximityPrompt } do
 		prompt:Destroy()
+	end
+	for _, tag in (run.data.doorTags or {}) :: { BillboardGui } do
+		tag:Destroy()
+	end
+	for _, glow in (run.data.doorLights or {}) :: { PointLight } do
+		glow:Destroy()
 	end
 	HeWalks.cleanup(run)
 end

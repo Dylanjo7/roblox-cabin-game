@@ -166,11 +166,11 @@ local Config = {
 	ExitCopiesEach = 1,
 
 	EventSeconds = {
-		fuse_box = 75,
+		fuse_box = 55, -- the fuse is always in the Crawlspace now, next door
 		the_knock = 45,
 		candlelight = 90,
 		he_walks = 60,
-		rising_water = 50,
+		rising_water = 32,
 		lockdown = 60,
 		final_escape = 90,
 		attic = 60,
@@ -186,26 +186,37 @@ local Config = {
 		ResultSeconds = 3, -- pause on the result before everyone returns to their seats
 		ItemSpread = 12, -- event items spawn up to this many studs from a room's centre
 		PromptDistance = 8,
+		-- When something that hunts catches you, it holds you this long (its kill), then you're out;
+		-- and for this long after a catch it stays where it is and can't catch anyone else, so the
+		-- people near you can get away.
+		KillHoldSeconds = 1.6,
+		KillPauseSeconds = 5,
 		PlayerLightRange = 16, -- light each player carries while the power is out
 		DarkClockTime = 0,
 		DarkBrightness = 0,
 		CandleRooms = 3, -- Candlelight marks this many rooms
 		CandleHeight = 2,
-		TallyMin = 1, -- Tally Marks: scratches per room
-		TallyMax = 5,
+		TallyCount = 10, -- Tally Marks: scratches on the wall (just for the look: it's there or it isn't)
 		SignPromptDistance = 9,
 		WaterMaxDepth = 4, -- how deep a flooded room gets
 		WaterUpdateSeconds = 0.2,
 		KnockMinSeconds = 5, -- The Knock: gap between knocks at the front door
 		KnockMaxSeconds = 9,
 		HeWalks = {
-			WalkSpeed = 9, -- studs per second while searching
-			ChaseSpeed = 13, -- while he can see someone
-			ViewDistance = 70,
-			ViewAngle = 60, -- degrees either side of where he's facing
-			CatchSeconds = 1.2, -- in his sight this long and you're caught
-			GrabDistance = 4, -- or this close while he sees you
+			WalkSpeed = 8, -- studs per second while searching
+			ChaseSpeed = 12, -- while he can see someone (you run at 16, so you can get away; 15 on Nightmare)
+			ViewDistance = 60,
+			ViewAngle = 55, -- degrees either side of where he's facing
+			-- Being seen doesn't catch you; he has to get to you. Caught: this close while he sees you...
+			GrabDistance = 4.5,
+			-- ...or kept in his sight this close for this long (you can't stand and stare at him).
+			CloseDistance = 12,
+			CatchSeconds = 1.5,
 			GraceSeconds = 5, -- he can't catch anyone for this long after he appears
+			-- At 3 AM: he stands in the front doorway this long before he moves (time to scatter), and
+			-- he's this much slower than in He Walks.
+			FinalHoldSeconds = 8,
+			FinalSpeed = 0.85,
 			HuntChance = 0.65, -- at each room, chance he heads towards the nearest player instead of wandering
 			EyeHeight = 10,
 			StepSeconds = 0.65, -- footstep sound interval

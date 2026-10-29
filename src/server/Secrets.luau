@@ -32,7 +32,6 @@ function Secrets.isTrueClue(result: string): boolean
 end
 
 -- For a played Clue card: the true result it reveals, or nil if it isn't a true clue.
--- (Tally Marks reveals Odd Tally or Even Tally, whichever is true.)
 function Secrets.trueResultFor(cardId: string): string?
 	if Config.Debug.AllCluesTrue then
 		return ClueData.resultsFor(cardId)[1]

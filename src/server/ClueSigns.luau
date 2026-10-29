@@ -9,7 +9,6 @@
 --   - It shows only while its card is the active clue; covered, it hides; uncovered again, it
 --     comes back in the same place. Once the card leaves the Altar it's gone for good. A second
 --     copy of the same clue picks a new spot.
---   - Tally Marks: scratches in up to 3 different rooms whose total is odd or even to match.
 -- Every sign has a "Record in Journal" prompt (see Journal).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -32,7 +31,6 @@ type Card = Types.Card
 type Spot = {
 	x: number,
 	z: number,
-	count: number?, -- Tally Marks: scratches at this spot
 	seed: number, -- so the sign looks the same each time it reappears
 	model: Model?,
 	thaw: (() -> ())?,
@@ -77,29 +75,9 @@ local function newSign(card: Card): Sign
 	if result == nil and not sign.decoy then
 		return sign -- not a true clue: nothing appears
 	end
-	if card.id == "tally_marks" then
-		local rooms = candidateCells()
-		local picked = {}
-		for _ = 1, math.min(3, #rooms) do
-			table.insert(picked, table.remove(rooms, rng:NextInteger(1, #rooms)))
-		end
-		local total = 0
-		for _, cell in picked do
-			local count = rng:NextInteger(Config.Events.TallyMin, Config.Events.TallyMax)
-			total += count
-			table.insert(sign.spots, { x = cell.x, z = cell.z, count = count, seed = rng:NextInteger(1, 1e6) })
-		end
-		-- Make the total odd or even to match the true tally.
-		local wantOdd = result == "odd_tally"
-		local last = sign.spots[#sign.spots]
-		if last and last.count and (total % 2 == 1) ~= wantOdd then
-			last.count = if last.count < Config.Events.TallyMax then last.count + 1 else last.count - 1
-		end
-	else
-		local cells = candidateCells()
-		local cell = cells[rng:NextInteger(1, #cells)]
-		table.insert(sign.spots, { x = cell.x, z = cell.z, seed = rng:NextInteger(1, 1e6) })
-	end
+	local cells = candidateCells()
+	local cell = cells[rng:NextInteger(1, #cells)]
+	table.insert(sign.spots, { x = cell.x, z = cell.z, seed = rng:NextInteger(1, 1e6) })
 	return sign
 end
 
@@ -113,9 +91,7 @@ local function recordPrompt(sign: Sign, spot: Spot, anchor: BasePart, roomName: 
 	prompt.RequiresLineOfSight = false
 	prompt.Parent = anchor
 	prompt.Triggered:Connect(function(player: Player)
-		local clue = if sign.card.id == "tally_marks" then "tally" else sign.card.id
-		local label = if spot.count then `{name}: {spot.count}` else name
-		Journal.record(player, `{sign.card.uid}:{spot.x},{spot.z}`, { clue = clue, label = label, room = roomName, count = spot.count })
+		Journal.record(player, `{sign.card.uid}:{spot.x},{spot.z}`, { clue = sign.card.id, label = name, room = roomName })
 	end)
 end
 
@@ -167,7 +143,7 @@ local function buildSpot(sign: Sign, spot: Spot)
 		m, thaw = SignModels.frost(folder, room, centre, half, signRng)
 		spot.thaw = thaw
 	elseif id == "tally_marks" then
-		m = SignModels.tally(folder, clearWall(5, Vector3.new(3, 2.4, 1.2)), spot.count or 1)
+		m = SignModels.tally(folder, clearWall(5, Vector3.new(3, 2.4, 1.2)), Config.Events.TallyCount)
 	else -- the_doll
 		-- In a corner with nothing in it (the next clear one along if a wardrobe's in the way).
 		local at, corner = Spots.corner(cell, signRng, 0.8)

@@ -3,8 +3,11 @@
 -- from the Parlor and walks room to room through the open archways, usually towards the nearest
 -- player, sometimes wandering. You hear his steps. He sees in a cone in front of him, and walls
 -- and furniture block his sight; hidden players (wardrobes, under beds) can't be seen. If he sees
--- you he comes straight at you. Stay in his sight too long, or let him reach you, and you're
--- caught (eliminated on the spot). When time runs out he leaves; everyone not caught is safe.
+-- you he comes straight at you, a little slower than you can run. Being seen from across a room
+-- doesn't catch you: he has to reach you, or keep you in sight up close for a moment. He takes
+-- one at a time: whoever he catches is held while he gets them (clients play his kill), and for
+-- a few seconds after he stays over them and can't catch anyone else, so the rest can run. When
+-- time runs out he leaves; everyone not caught is safe.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -52,7 +55,7 @@ end
 local function targets(run: EventRun): { Player }
 	local out = {}
 	for _, player in run.players do
-		if run.isActive(player) and not Hiding.isHidden(run, player) and EventKit.root(player) then
+		if run.isActive(player) and not Hiding.isHidden(run, player) and not EventKit.isSeized(run, player) and EventKit.root(player) then
 			table.insert(out, player)
 		end
 	end
@@ -132,9 +135,13 @@ function HeWalks.start(run: EventRun)
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	local exposure: { [Player]: number } = {}
 	local warned: { [Player]: boolean } = {}
-	local graceUntil = os.clock() + cfg.GraceSeconds
+	-- (The final escape holds him in the doorway a while first, and slows him down.)
+	local holdUntil = os.clock() + (run.data.holdSeconds or 0)
+	local graceUntil = math.max(os.clock() + cfg.GraceSeconds, holdUntil)
+	local pace = Difficulty.get().huntSpeed * (run.data.speedScale or 1)
 	local route: { Vector3 } = {}
 	local lastStep = 0
+	local busyUntil = 0 -- after a catch: he stays put, and can't catch anyone, until then
 
 	task.spawn(function()
 		while not run.over and figure.Parent do
@@ -154,11 +161,13 @@ function HeWalks.start(run: EventRun)
 			local eye = position + Vector3.new(0, cfg.EyeHeight, 0)
 			local chase: Vector3? = nil
 			local chaseDistance = math.huge
+			local busy = os.clock() < busyUntil
+			figure:SetAttribute("Killing", busy)
 			for _, player in run.players do
 				local visible = false
 				local root = EventKit.root(player)
 				local flatDistance = math.huge
-				if root and run.isActive(player) and not Hiding.isHidden(run, player) then
+				if root and not busy and run.isActive(player) and not Hiding.isHidden(run, player) and not EventKit.isSeized(run, player) then
 					local target = root.Position + Vector3.new(0, 1.5, 0)
 					local offset = target - eye
 					local flat = Vector3.new(offset.X, 0, offset.Z)
@@ -171,7 +180,8 @@ function HeWalks.start(run: EventRun)
 					end
 				end
 				if visible and root then
-					exposure[player] = (exposure[player] or 0) + dt
+					-- Only up close does being in his sight count against you.
+					exposure[player] = if flatDistance < cfg.CloseDistance then (exposure[player] or 0) + dt else 0
 					if not warned[player] then
 						warned[player] = true
 						Remotes.notify(player, "He sees you. RUN.")
@@ -180,10 +190,25 @@ function HeWalks.start(run: EventRun)
 						chase, chaseDistance = Vector3.new(root.Position.X, position.Y, root.Position.Z), flatDistance
 					end
 					local caught = exposure[player] >= cfg.CatchSeconds or flatDistance < cfg.GrabDistance
-					if caught and os.clock() > graceUntil then
+					if caught and os.clock() > graceUntil and EventKit.seize(run, player, position) then
+						-- Got one. He closes on them and stays over them; everyone else has a moment.
 						EventKit.sound("caught", figure, 0.8)
-						run.eliminate(player)
 						exposure[player] = 0
+						busy = true
+						busyUntil = os.clock() + Config.Events.KillPauseSeconds
+						figure:SetAttribute("Killing", true)
+						local toThem = Vector3.new(root.Position.X - position.X, 0, root.Position.Z - position.Z)
+						if toThem.Magnitude > 0.1 then
+							facing = toThem.Unit
+							position = Vector3.new(root.Position.X, position.Y, root.Position.Z) - facing * 2.6
+						end
+						chase = nil
+						for _, other in run.players do
+							if other ~= player and run.isActive(other) then
+								Remotes.notify(other, `He's got {player.DisplayName}. Run, while he's busy!`)
+							end
+						end
+						break
 					end
 				else
 					exposure[player] = 0
@@ -191,13 +216,21 @@ function HeWalks.start(run: EventRun)
 				end
 			end
 
-			-- Walk: straight at whoever he sees, otherwise room to room.
+			-- Walk: straight at whoever he sees, otherwise room to room (not while he's held in the
+			-- doorway, or busy with someone).
 			local goal: Vector3? = chase
-			local speed = cfg.ChaseSpeed * Difficulty.get().huntSpeed
-			if chase then
+			local speed = cfg.ChaseSpeed * pace
+			if busy then
+				goal = nil
+			elseif os.clock() < holdUntil then
+				goal = nil
+				if chase then
+					facing = (chase - position).Unit
+				end
+			elseif chase then
 				route = {}
 			else
-				speed = cfg.WalkSpeed * Difficulty.get().huntSpeed
+				speed = cfg.WalkSpeed * pace
 				if #route == 0 then
 					local here = cellAt(position) or start
 					route = nextLeg(run, here)

@@ -135,6 +135,37 @@ function EventKit.root(player: Player): BasePart?
 	return if root and root:IsA("BasePart") then root else nil
 end
 
+-- Caught by something that hunts (He Walks, the final escape, Don't Look Away): held where they
+-- stand for a moment, facing it while it gets them, then they're out. Returns false if they
+-- can't be (already held, out of play, or no character).
+function EventKit.seize(run: EventRun, player: Player, by: Vector3): boolean
+	local seized: { [Player]: boolean } = run.data.seized or {}
+	run.data.seized = seized
+	local root = EventKit.root(player)
+	if seized[player] or not root or not run.isActive(player) then
+		return false
+	end
+	seized[player] = true
+	local at = root.Position
+	root.Anchored = true
+	root.CFrame = CFrame.lookAt(at, Vector3.new(by.X, at.Y, by.Z))
+	Remotes.notify(player, "It has you.")
+	task.delay(Config.Events.KillHoldSeconds, function()
+		seized[player] = nil
+		if root.Parent then
+			root.Anchored = false
+		end
+		run.eliminate(player) -- (nothing happens if the event ended meanwhile)
+	end)
+	return true
+end
+
+-- Being held by it right now (about to be out): it ignores them meanwhile.
+function EventKit.isSeized(run: EventRun, player: Player): boolean
+	local seized = run.data.seized
+	return seized ~= nil and seized[player] == true
+end
+
 -- Move a player's character so its root sits at this CFrame.
 function EventKit.teleport(player: Player, cf: CFrame)
 	local character = player.Character

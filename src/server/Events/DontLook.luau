@@ -16,6 +16,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local PaleFigureModel = require(Shared:WaitForChild("PaleFigureModel"))
+local Remotes = require(Shared:WaitForChild("Remotes"))
 local RoomShapes = require(Shared:WaitForChild("RoomShapes"))
 local Types = require(Shared:WaitForChild("Types"))
 
@@ -237,7 +238,7 @@ function DontLook.start(run: EventRun)
 			local root = EventKit.root(player)
 			local cell = root and cellAt(root.Position)
 			local roomsAway = cell and away[MapGrid.key(cell.x, cell.z)]
-			if root and cell and roomsAway and run.isActive(player) then
+			if root and cell and roomsAway and run.isActive(player) and not EventKit.isSeized(run, player) then
 				local score = roomsAway * 1000 + flat(root.Position - position).Magnitude
 				if score < bestScore then
 					bestRoot, bestCell, bestScore = root, cell, score
@@ -283,14 +284,32 @@ function DontLook.start(run: EventRun)
 		end
 	end
 
+	-- One at a time: it takes whoever it reached, reaching for them, and stays put (harmless)
+	-- for a few seconds after, so anyone close by can get away.
+	local busyUntil = 0
 	local function catch()
+		if os.clock() < busyUntil then
+			return
+		end
 		for _, player in run.players do
 			local root = EventKit.root(player)
 			if root and run.isActive(player) then
 				local close = flat(root.Position - position).Magnitude < cfg.CatchDistance
-				if close and math.abs(root.Position.Y - position.Y) < 8 then
+				if close and math.abs(root.Position.Y - position.Y) < 8 and EventKit.seize(run, player, position) then
 					EventKit.sound("caught", body, 0.8)
-					run.eliminate(player)
+					busyUntil = os.clock() + Config.Events.KillPauseSeconds
+					local toThem = flat(root.Position - position)
+					if toThem.Magnitude > 0.1 then
+						facing = toThem.Unit
+					end
+					poseIndex = 3 -- both arms out, reaching
+					place()
+					for _, other in run.players do
+						if other ~= player and run.isActive(other) then
+							Remotes.notify(other, `It's got {player.DisplayName}. Get away from it!`)
+						end
+					end
+					return
 				end
 			end
 		end
@@ -319,7 +338,10 @@ function DontLook.start(run: EventRun)
 			local now = os.clock()
 			local seen = watched(run, position, params)
 
-			if now >= nextBlink then
+			if now < busyUntil then
+				-- Busy with the one it caught: it doesn't move, and the lights hold.
+				nextBlink = math.max(nextBlink, busyUntil + 1)
+			elseif now >= nextBlink then
 				-- The lights fail. Everyone's dark first, then it moves, and it's somewhere else
 				-- when they come back.
 				nextBlink = now + rng:NextNumber(cfg.BlinkMinSeconds, cfg.BlinkMaxSeconds)

@@ -62,7 +62,7 @@ function Hiding.enable(run: EventRun)
 		local prompt = EventKit.prompt(body, "Hide", object)
 		table.insert(prompts, prompt)
 		prompt.Triggered:Connect(function(player: Player)
-			if not run.isActive(player) then
+			if not run.isActive(player) or EventKit.isSeized(run, player) then
 				return
 			end
 			local current = occupant[spot]

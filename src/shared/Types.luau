@@ -87,10 +87,10 @@ export type EventModule = {
 
 -- One clue sign written into the shared Journal.
 export type JournalEntry = {
-	clue: string, -- a clue result id (e.g. "frost"), or "tally" for scratch marks
+	clue: string, -- a clue result id (e.g. "frost")
 	label: string,
 	room: string,
-	count: number?, -- tally marks at that spot
+	count: number?, -- (no longer used: tally marks aren't counted)
 	by: string, -- who recorded it
 }
 

@@ -1,8 +1,8 @@
 --!strict
--- Fuse Box: the power dies. Find the fuse in a random built room and carry it back to the
--- fuse box in the Parlor. Group task: if the fuse isn't in the box when time runs out,
--- everyone still in play is eliminated. If whoever has it leaves the game, it turns up again
--- where it was found.
+-- Fuse Box: the power dies. The spare fuse is always in the same place, the middle of the
+-- Crawlspace (marked so it shows through the walls): fetch it and carry it back to the fuse box
+-- in the Parlor. Group task: if the fuse isn't in the box when time runs out, everyone still in
+-- play is eliminated. If whoever has it leaves the game, it turns up again where it was found.
 
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -23,13 +23,15 @@ local FUSE_COLOR = Color3.fromRGB(255, 205, 80)
 
 local FuseBox = {}
 
--- A clear spot on the floor of a random built room other than the Parlor and Crawlspace (the
--- Parlor if there's none): never under or inside furniture.
+-- Where the spare fuse is kept, every time: the middle of the Crawlspace (the room every run
+-- starts with, and the middle of it is always open floor), or the Parlor if it's missing.
 local function fuseSpot(): Vector3
-	local rooms = EventKit.rooms({ parlor = true, crawlspace = true })
-	local cell = if #rooms > 0 then EventKit.pick(rooms, 1)[1] else MapGrid.get(0, 0)
-	assert(cell, "The Parlor is missing")
-	return EventKit.clearSpot(cell, 1.2)
+	for _, cell in MapGrid.all() do
+		if cell.id == "crawlspace" then
+			return RoomShapes.cellPosition(cell.x, cell.z)
+		end
+	end
+	return EventKit.clearSpot(MapGrid.get(0, 0) :: MapGrid.Cell, 1.2)
 end
 
 local function darken(run: EventRun)
@@ -73,6 +75,7 @@ function FuseBox.start(run: EventRun)
 		local model, fuse = EventItems.fuse(folder, CFrame.new(floor + Vector3.new(0, 1.8, 0)))
 		fuseModel = model
 		local pool = EventItems.pool(folder, floor, FUSE_COLOR)
+		EventKit.marker(fuse, "Fuse", FUSE_COLOR)
 		local pickUp = EventKit.prompt(fuse, "Pick up", "Fuse")
 		pickUp.Triggered:Connect(function(player: Player)
 			if not run.isActive(player) or run.data.carrier then

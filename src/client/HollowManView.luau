@@ -116,6 +116,7 @@ function HollowManView.init()
 		for _, figure in table.clone(figures) do
 			local marker = figure.marker
 			local chasing = false
+			local killing = false
 			local watch = figure.watch
 			if marker then
 				if not marker.Parent then
@@ -129,9 +130,10 @@ function HollowManView.init()
 				local speed = if dt > 0 then moved.Magnitude / dt else 0
 				figure.speed += (speed - figure.speed) * math.min(1, dt * 8)
 				chasing = marker:GetAttribute("Chasing") == true
-				watch = marker:GetAttribute("Watch") == true
+				killing = marker:GetAttribute("Killing") == true
+				watch = marker:GetAttribute("Watch") == true and not killing
 			end
-			HollowManRig.pose(figure.rig, figure.pivot, dt, figure.speed, chasing, if watch then head else nil)
+			HollowManRig.pose(figure.rig, figure.pivot, dt, figure.speed, chasing, if watch then head else nil, killing)
 		end
 	end)
 end

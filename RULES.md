@@ -12,7 +12,7 @@ The goal is to survive until 3:00 AM, work out the correct exit from three clues
 
 ## The table
 
-All card play happens at one round table in the Parlor, and players must be seated for a turn to start.
+All card play happens at one round table in the Parlor, and players must be seated for a turn to start. Walk into a chair to sit, or press E at it (the prompt always works).
 
 - **Cabin map (center):** a model of the cabin. Every Room card played is added here and also built at full size in the world.
 - **Clock track (outer ring):** runs from 9:00 PM to 3:00 AM in 30-minute steps, 12 steps in all. The group shares one piece, the Candle. The Hollow Man's piece also moves on this track. Each piece stands on a stick from its own wheel inside the table, and the wheel ratchets round one step at a time. The time is shown only here and on the cabin's clocks, never on screen.
@@ -95,10 +95,10 @@ Playing a Clue card puts it on top of the Altar stack, and only the top card is 
 | Wet Footprints | Bare, wet footprints track across a floor and stop in the middle of a room. |
 | Rocking Chair | An empty rocking chair rocks by itself in one room, creaking loud enough to follow. |
 | Frost | One room's windows ice over and players' breath fogs inside it. |
-| Tally Marks | Scratch marks appear in 3 different rooms. Add them up: an odd total means Odd Tally, an even total means Even Tally. |
+| Tally Marks | Scratch marks gouged into a wall in one room, in fives, like someone counting the days. It's there or it isn't, like the others (the number doesn't matter). |
 | The Doll | A cloth doll sits facing the wall. It can be a decoy: if it's fake, its stitched smile turns into a frown once the third true clue is revealed. |
 
-That's 7 possible clue results, since Tally Marks splits into Odd and Even.
+That's 6 clue results, one per Clue card. (Tally Marks used to split into Odd and Even by adding up scratches across rooms. Playtesters couldn't follow it, so it's a plain clue now, and every exit still has its own three.)
 
 ## Exit rooms
 
@@ -106,13 +106,13 @@ Eight Room cards are exit rooms, one copy each, and only one is the true exit in
 
 | Exit room | Doors | Clue 1 | Clue 2 | Clue 3 |
 | --- | --- | --- | --- | --- |
-| Boathouse | 1 | Music Box | Frost | Odd Tally |
+| Boathouse | 1 | Music Box | Frost | Tally Marks |
 | Root Cellar | 1 | Wet Footprints | Rocking Chair | The Doll |
-| Greenhouse | 2 | Frost | Wet Footprints | Even Tally |
-| Study | 2 | Music Box | Rocking Chair | Even Tally |
+| Greenhouse | 2 | Frost | Wet Footprints | Tally Marks |
+| Study | 2 | Music Box | Rocking Chair | Tally Marks |
 | Chapel | 2 | The Doll | Frost | Music Box |
-| Workshop | 2 | Wet Footprints | Odd Tally | Rocking Chair |
-| Nursery | 3 | The Doll | Even Tally | Wet Footprints |
+| Workshop | 2 | Wet Footprints | Tally Marks | Rocking Chair |
+| Nursery | 3 | The Doll | Tally Marks | Wet Footprints |
 | Mudroom | 3 | Music Box | Rocking Chair | Frost |
 
 The true exit has to be built before 3:00 AM to escape through it, so holding exit cards and choosing when to play them is part of the strategy.
@@ -145,18 +145,19 @@ An Event card starts the moment it's drawn and pulls every player away from the 
 
 | Event | What players must do | Time |
 | --- | --- | --- |
-| Fuse Box | The power dies. Find the fuse in a random built room and carry it back to the Parlor. | 75 s |
+| Fuse Box | The power dies. The spare fuse is always in the middle of the Crawlspace (marked through the walls): carry it to the fuse box in the Parlor. | 55 s |
 | The Knock | Something knocks at the front door. Every player must be hidden in a closet or under a bed when it opens. If the cabin doesn't have enough hiding places for everyone, there's room under the Parlor table. | 45 s |
 | Candlelight | Light candles in 3 marked rooms before the last one burns out. | 90 s |
-| He Walks | The Hollow Man enters the cabin in person and hunts. Stay out of his sight until he leaves. | 60 s |
-| Rising Water | Water floods out from the Crawlspace. Get to the room farthest from it on the map. | 50 s |
-| Lockdown | All doors slam shut. Find the key in your room to open your way back to the table. | 60 s |
+| He Walks | The Hollow Man enters the cabin in person and hunts. If he sees you he comes for you, a little slower than you can run. Being seen doesn't catch you: he has to reach you (or keep you in sight up close for a moment). Hide or outrun him until he leaves. | 60 s |
+| Rising Water | Water floods out from the Crawlspace. Get to the room farthest from it on the map. | 32 s |
+| Lockdown | All doors slam shut. Your room's key always floats just inside its door back to the table: take it to open the way, then sit back down. | 60 s |
 | Don't Look Away | Something pale climbs out of the mirrors. It only moves while nobody is looking at it, and every so often the lights fail for a blink and it moves anyway. It comes for the nearest player; if it reaches you, you're out. Cover the marked mirrors (up to 3) to send it back. If any mirror is still bare at the end, everyone still in play is out. | 75 s |
 | Hush | A gramophone starts playing somewhere in the cabin. Move while the music plays. When the needle lifts, freeze: anyone who moves (turning to look is fine) before it plays again is out. Find it and lift the needle for good. After 25 seconds everyone is told which room it's in. If it's still playing at the end, everyone still in play is out. | 70 s |
 
 **Elimination**
 
 - You can't reset your character during an event or the final escape.
+- **One at a time.** When he (or the pale thing) catches someone, it holds them for a moment while it gets them, and for 5 seconds after it stays where it is and can't catch anyone else, so the players near them can get away.
 - A player who fails an event wakes up in the basement under the Crawlspace. Its door is barred until the event ends.
 - Every player caught lets the Hollow Man gain 30 minutes on the Candle (if he's on the track yet), up to 1 hour from any one event, however many are caught. The Candle itself doesn't move.
 - When the event ends the basement door opens, and eliminated players climb out and walk back to the table. The next turn waits until everyone is seated. Elimination costs time, not your spot in the run.
@@ -166,8 +167,8 @@ An Event card starts the moment it's drawn and pulls every player away from the 
 Reaching 3:00 AM isn't a loss. It starts the final escape, whether or not the group found all three clues.
 
 1. The clocks strike three (a 10-second cutscene; the 90 seconds start after it). Every built exit room's outside door unseals. Only the true exit's door leads out; the rest are traps.
-2. The Hollow Man bursts in through the front door and starts hunting.
-3. Each player has 90 seconds to reach the exit room they believe is right and go through its door.
+2. The Hollow Man bursts in through the front door. He stands in the doorway for 8 seconds, then hunts, a bit slower than in He Walks.
+3. Each player has 90 seconds to reach the exit room they believe is right and go through its door. Unsealed doors glow and are labelled once you're in their room; press **F** at one to go through (its own key, so a nearby Hide or Record prompt can't get in the way).
 4. A player who picks a wrong door, or is caught, is out.
 
 **Win:** at least one player escapes through the true exit. Everyone who got out is credited with the win.

@@ -1,9 +1,11 @@
 --!strict
 -- Lockdown: every door in the cabin slams shut and each player is shut in a random built room
--- (not the Parlor or Crawlspace; the Parlor if there are no others). A glowing key lies somewhere
--- in each locked room. Taking it opens every door along the shortest way from that room back to
--- the Parlor. Judged per player: anyone not seated at the table when time runs out is eliminated.
--- The event ends early once everyone still in play is back in a seat.
+-- (not the Parlor or Crawlspace; the Parlor if there are no others). Each locked room's key is
+-- always in the same place: floating at chest height just inside the door that leads back
+-- towards the table (doorways are always kept clear, so it's never under or behind anything).
+-- Taking it opens every door along the shortest way from that room back to the Parlor. Judged
+-- per player: anyone not seated at the table when time runs out is eliminated. The event ends
+-- early once everyone still in play is back in a seat.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -50,6 +52,40 @@ local function openPathFrom(run: EventRun, start: Cell)
 		end
 		current = nextCell
 	end
+end
+
+-- The floor point just inside this room's door back towards the Parlor (any open door for the
+-- Parlor itself), where its key waits.
+local function keySpot(cell: Cell): Vector3
+	local centre = RoomShapes.cellPosition(cell.x, cell.z)
+	local toward: Vector3? = nil
+	local dist = MapGrid.distancesFrom(0, 0)
+	local here = dist[MapGrid.key(cell.x, cell.z)]
+	for dir in cell.doors do
+		local dx, dz = RoomShapes.offset(dir :: RoomShapes.Dir)
+		local n = MapGrid.get(cell.x + dx, cell.z + dz)
+		if n and here and dist[MapGrid.key(n.x, n.z)] == here - 1 then
+			toward = RoomShapes.cellPosition(n.x, n.z)
+		end
+	end
+	local best: BasePart? = nil
+	local bestScore = math.huge
+	for _, doorway in if cell.model then EventKit.doorways(cell.model) else {} do
+		local score = if toward then (doorway.Position - toward).Magnitude else 0
+		if not doorway:GetAttribute("Open") then
+			score += 1e6 -- a sealed one only if there's nothing else
+		end
+		if score < bestScore then
+			best, bestScore = doorway, score
+		end
+	end
+	if not best then
+		return EventKit.clearSpot(cell, 1.2)
+	end
+	local inward = (centre - best.Position) * Vector3.new(1, 0, 1)
+	inward = if inward.Magnitude > 0.1 then inward.Unit else Vector3.zAxis
+	local at = best.Position + inward * 3.5
+	return Vector3.new(at.X, centre.Y, at.Z)
 end
 
 local function allSeated(run: EventRun): boolean
@@ -99,10 +135,12 @@ function Lockdown.start(run: EventRun)
 		end
 		if not keys[k] then
 			keys[k] = true
-			-- On clear floor (never under a table), floating and glinting over a pool of light.
-			local floor = EventKit.clearSpot(cell, 1.2)
-			local keyModel, key = EventItems.key(folder, CFrame.new(floor + Vector3.new(0, 2.2, 0)) * CFrame.Angles(0, EventKit.rng:NextNumber(0, 6), 0))
+			-- By the door back to the table, at chest height, glinting over a pool of light.
+			local floor = keySpot(cell)
+			local keyModel, key = EventItems.key(folder, CFrame.new(floor + Vector3.new(0, 3.6, 0)) * CFrame.Angles(0, EventKit.rng:NextNumber(0, 6), 0))
 			local pool = EventItems.pool(folder, floor, KEY)
+			local tag = EventKit.marker(key, "Key", KEY).Parent :: BillboardGui
+			tag.MaxDistance = 45
 			local prompt = EventKit.prompt(key, "Take", "Key")
 			prompt.Triggered:Connect(function(player: Player)
 				if not run.isActive(player) then

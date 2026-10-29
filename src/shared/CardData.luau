@@ -170,7 +170,7 @@ local CARDS: { CardDef } = {
 		name = "Fuse Box",
 		type = "Event",
 		inDeck = true,
-		text = "The power dies. Find the fuse in a random built room and carry it back to the Parlor.",
+		text = "The power dies. The spare fuse is in the middle of the Crawlspace: carry it to the fuse box in the Parlor.",
 	},
 	{
 		id = "the_knock",
@@ -205,7 +205,7 @@ local CARDS: { CardDef } = {
 		name = "Lockdown",
 		type = "Event",
 		inDeck = true,
-		text = "All doors slam shut. Find the key in your room to open your way back to the table.",
+		text = "All doors slam shut. Your room's key hangs just inside its door back to the table: take it and get back.",
 	},
 	{
 		id = "dont_look",
@@ -256,7 +256,7 @@ local CARDS: { CardDef } = {
 		name = "Tally Marks",
 		type = "Clue",
 		inDeck = true,
-		text = "Scratch marks appear in 3 rooms. An odd total means Odd Tally, an even total Even Tally.",
+		text = "Scratch marks gouged into a wall in one room, in fives, like someone counting the days.",
 	},
 	{
 		id = "the_doll",
