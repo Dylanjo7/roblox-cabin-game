@@ -23,7 +23,7 @@ All card play happens at one round table in the Parlor, and players must be seat
 ## Setup
 
 1. Players meet in a lobby (a ranger station works), set difficulty, then get into a truck together to start the run.
-2. The run begins in the Parlor, the fixed starting room with a door on all four sides.
+2. The run begins in the Parlor, the fixed starting room with a door on all four sides. Everyone walks up from the dead truck. The front door slams once the whole group is inside, or 45 seconds after the first player gets in, whichever comes first (anyone still outside is brought in). It also slams the moment a run starts.
 3. The server secretly picks the true exit room and its three true clues (see Exit rooms).
 4. The Candle starts at 9:00 PM. The Hollow Man starts off the track and enters at 9:00 PM after the first 4 turns.
 5. The first card played is always the Crawlspace, a one-door room attached to any Parlor doorway. It can't be built from, so the cabin grows from the Parlor's other three doors.
@@ -39,6 +39,18 @@ The card stand faces the active player, who starts the turn once everyone is sea
 4. **End the turn.** The ring rotates to the next player.
 
 A round is one turn for every seated player. Only cards move the Candle: never a turn, a round or an event.
+
+**Nobody holds up the table (2+ players).** Each step of a turn has a time limit, with a countdown on screen for the last 12 seconds. When it runs out, the game takes the step for you.
+
+| Step | Limit | What happens |
+| --- | --- | --- |
+| Starting your turn | 60 s | Anyone not in their chair is put back in it, and your turn starts. |
+| Taking a card | 40 s | You take the card from the box. With the deck empty, it's treated as the play step. |
+| Playing a card | 50 s | A card is played for you: an exit room first, then a clue, a room, and a Progress card last. On a last turn a Progress card comes first, since only that can save the run. With an empty hand you take the top clue off the Altar, or your turn passes. |
+| Placing a room | 60 s | The room goes in a random valid spot. |
+| Peek or Swap | 40 s | Peek leaves the cards as they are. Swap trades with the next player round the table. |
+
+Solo, the table waits for you.
 
 ## Room cards
 
@@ -134,7 +146,7 @@ An Event card starts the moment it's drawn and pulls every player away from the 
 | Event | What players must do | Time |
 | --- | --- | --- |
 | Fuse Box | The power dies. Find the fuse in a random built room and carry it back to the Parlor. | 75 s |
-| The Knock | Something knocks at the front door. Every player must be hidden in a closet or under a bed when it opens. | 45 s |
+| The Knock | Something knocks at the front door. Every player must be hidden in a closet or under a bed when it opens. If the cabin doesn't have enough hiding places for everyone, there's room under the Parlor table. | 45 s |
 | Candlelight | Light candles in 3 marked rooms before the last one burns out. | 90 s |
 | He Walks | The Hollow Man enters the cabin in person and hunts. Stay out of his sight until he leaves. | 60 s |
 | Rising Water | Water floods out from the Crawlspace. Get to the room farthest from it on the map. | 50 s |
@@ -144,6 +156,7 @@ An Event card starts the moment it's drawn and pulls every player away from the 
 
 **Elimination**
 
+- You can't reset your character during an event or the final escape.
 - A player who fails an event wakes up in the basement under the Crawlspace. Its door is barred until the event ends.
 - Every player caught lets the Hollow Man gain 30 minutes on the Candle (if he's on the track yet), up to 1 hour from any one event, however many are caught. The Candle itself doesn't move.
 - When the event ends the basement door opens, and eliminated players climb out and walk back to the table. The next turn waits until everyone is seated. Elimination costs time, not your spot in the run.
@@ -162,6 +175,8 @@ Reaching 3:00 AM isn't a loss. It starts the final escape, whether or not the gr
 **Lose:** nobody escapes, the true exit was never built, or the Hollow Man ends the run before 3:00 AM.
 
 With fewer than three clues, players have to guess between the exits that still fit, which is why skipping clues to rush the clock is risky.
+
+**The end of the night.** After the ending plays, everyone sees the night in numbers: how long it took, the rounds played, the time the Candle reached, rooms built, signs written in the Journal, notes found, how each event went, and which exit was the true one. Each player gets a line (cards played, rooms placed, signs written, times caught, and whether they got out), and a few get a title: First Out, The Detective (most signs), The Builder (most rooms), Untouchable (never caught, 2+ events), His Favourite (caught the most). The table resets, or the party goes back to the ranger station, 36 seconds after the run ends.
 
 ## Deck list
 

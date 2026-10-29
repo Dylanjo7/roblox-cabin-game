@@ -19,6 +19,7 @@ local Types = require(Shared:WaitForChild("Types"))
 local Basement = require(script.Parent.Basement)
 local Clock = require(script.Parent.Clock)
 local Difficulty = require(script.Parent.Difficulty)
+local RunStats = require(script.Parent.RunStats)
 local StateSync = require(script.Parent.StateSync)
 local Table = require(script.Parent.Table)
 
@@ -41,6 +42,16 @@ local EVENTS: { [string]: EventModule } = {
 local EventRunner = {}
 
 local current: EventRun? = nil
+
+-- Run part of an event, and carry on if it fails (an event that errors halfway mustn't leave
+-- everyone standing in the cabin forever).
+local function safely(what: string, f: () -> ()): boolean
+	local ok, err = pcall(f)
+	if not ok then
+		warn(`Hollow Pines: {what} failed: {err}`)
+	end
+	return ok
+end
 
 local function notifyAll(players: { Player }, text: string)
 	for _, p in players do
@@ -74,6 +85,7 @@ local function eliminate(run: EventRun, player: Player)
 		return
 	end
 	run.eliminated[player] = true
+	RunStats.count(player, "caught")
 	local character = parts(player)
 	if character then
 		-- Down to the basement under the Crawlspace; its door stays shut until the event ends.
@@ -105,17 +117,7 @@ local function returnToSeats(run: EventRun)
 			Remotes.notify(player, "The basement door grinds open. Climb the stairs and get back to the table.")
 			continue
 		end
-		local character, humanoid, root = parts(player)
-		if character and humanoid and root then
-			root.Anchored = false
-			local index = run.seats[player] or Table.freeSeat()
-			if index then
-				local seat = Table.seatPart(index)
-				seat.Disabled = false
-				character:PivotTo(seat.CFrame * CFrame.new(0, 3, 0))
-				seat:Sit(humanoid)
-			end
-		end
+		Table.seatPlayer(player, run.seats[player])
 	end
 end
 
@@ -127,13 +129,18 @@ local function finish(run: EventRun, failures: { Player }, onFinished: () -> ())
 		eliminate(run, player)
 	end
 	run.over = true
-	EVENTS[run.id].cleanup(run)
+	safely(`{run.id} cleanup`, function()
+		EVENTS[run.id].cleanup(run)
+	end)
 
 	local count = 0
 	for _ in run.eliminated do
 		count += 1
 	end
 	local name = CardData.get(run.id).name
+	if run.id ~= "final_escape" then
+		RunStats.eventOver(name, count)
+	end
 	if EVENTS[run.id].noPenalty then
 		notifyAll(run.players, `{name} is over.`)
 	elseif count == 0 then
@@ -153,7 +160,9 @@ local function finish(run: EventRun, failures: { Player }, onFinished: () -> ())
 			return
 		end
 		if not EVENTS[run.id].keepPlayers then
-			returnToSeats(run)
+			safely("returning players to the table", function()
+				returnToSeats(run)
+			end)
 		end
 		Basement.setLocked(false)
 		current = nil
@@ -202,12 +211,24 @@ function EventRunner.start(id: string, players: { Player }, onFinished: () -> ()
 	end
 	current = run
 	Basement.setLocked(true)
-	module.start(run)
+	local started = safely(`{id} start`, function()
+		module.start(run)
+	end)
 	StateSync.broadcast()
+	if not started and not run.over then
+		-- It couldn't set itself up: call it off, nobody fails, and play goes on.
+		notifyAll(run.players, `{CardData.get(id).name} fizzles out. Nothing happens... this time.`)
+		run.complete()
+		return
+	end
 
 	task.delay(seconds, function()
 		if current == run and not run.over then
-			finish(run, module.onTimeout(run), onFinished)
+			local failures: { Player } = {}
+			safely(`{id} timeout`, function()
+				failures = module.onTimeout(run)
+			end)
+			finish(run, failures, onFinished)
 		end
 	end)
 end
@@ -222,7 +243,9 @@ function EventRunner.abort()
 	Basement.setLocked(false)
 	if not run.over then
 		run.over = true
-		EVENTS[run.id].cleanup(run)
+		safely(`{run.id} cleanup`, function()
+			EVENTS[run.id].cleanup(run)
+		end)
 	end
 	for _, player in run.players do
 		local _, _, root = parts(player)

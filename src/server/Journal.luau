@@ -12,6 +12,7 @@ local ClueData = require(Shared:WaitForChild("ClueData"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
 local Types = require(Shared:WaitForChild("Types"))
 
+local RunStats = require(script.Parent.RunStats)
 local StateSync = require(script.Parent.StateSync)
 
 local Journal = {}
@@ -37,6 +38,7 @@ function Journal.record(player: Player, key: string, entry: { clue: string, labe
 	end
 	recorded[key] = true
 	table.insert(entries, { clue = entry.clue, label = entry.label, room = entry.room, count = entry.count, by = player.DisplayName })
+	RunStats.count(player, "clues")
 	if ClueData.Results[entry.clue] and not marks[entry.clue] then
 		marks[entry.clue] = "found"
 	end

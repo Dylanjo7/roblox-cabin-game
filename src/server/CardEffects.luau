@@ -190,6 +190,33 @@ function CardEffects.cancelFor(player: Player): boolean
 	return had
 end
 
+-- Out of time on a Peek or a Swap choice: finish it as it stands (Peek: the cards stay in the
+-- order they're in; Swap: with the next player round the table). Returns true if there was one.
+function CardEffects.finishFor(player: Player): boolean
+	local peek = pendingPeek
+	if peek and peek.player == player then
+		pendingPeek = nil
+		Remotes.event("PeekCards"):FireClient(player, nil)
+		Remotes.notify(player, "Out of time: the cards go back as they are.")
+		peek.onDone()
+		return true
+	end
+	local swap = pendingSwap
+	if swap and swap.player == player then
+		pendingSwap = nil
+		Remotes.event("SwapOptions"):FireClient(player, nil)
+		for _, other in swap.options do
+			if other.Parent then
+				swapWith(player, other, swap.players)
+				break
+			end
+		end
+		swap.onDone()
+		return true
+	end
+	return false
+end
+
 function CardEffects.reset()
 	pendingPeek = nil
 	pendingSwap = nil

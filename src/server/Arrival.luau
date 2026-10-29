@@ -1,8 +1,10 @@
 --!strict
 -- The arrival. Players first spawn beside the truck outside and walk up the path to the cabin,
 -- where the front door stands open. Once everyone is inside the Parlor, the door slams and locks
--- for good; from then on players spawn inside. The porch, path and truck stay outside until a
--- room is built in the Parlor's south cell, which takes their place.
+-- for good; from then on players spawn inside. Nobody is left waiting on someone who won't come
+-- in: once anyone is inside, the rest have Config.Arrival.WaitSeconds, then they're brought in
+-- and the door slams anyway (and it always does as a run starts). The porch, path and truck
+-- stay outside until a room is built in the Parlor's south cell, which takes their place.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -10,6 +12,8 @@ local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
+local Remotes = require(Shared:WaitForChild("Remotes"))
+local RoomShapes = require(Shared:WaitForChild("RoomShapes"))
 
 local Forest = require(script.Parent.Forest)
 local MapGrid = require(script.Parent.MapGrid)
@@ -171,6 +175,29 @@ function Arrival.isDoorClosed(): boolean
 	return closed
 end
 
+local function rootOf(player: Player): BasePart?
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	return if root and root:IsA("BasePart") then root else nil
+end
+
+-- Bring anyone still outside in (a few steps inside the door, clear of its swing) and slam it.
+function Arrival.forceClose()
+	if closed then
+		return
+	end
+	local inside = RoomShapes.frontDoorInside() * CFrame.new(0, 3, -5)
+	for _, player in Players:GetPlayers() do
+		local root = rootOf(player)
+		local character = player.Character
+		if root and character and not insideParlor(root.Position) then
+			character:PivotTo(inside)
+			Remotes.notify(player, "Something hurries you up the path and through the door.")
+		end
+	end
+	slam()
+end
+
 function Arrival.init()
 	buildDoor()
 	refreshOutside()
@@ -194,21 +221,30 @@ function Arrival.init()
 	spawn.Parent = workspace
 	arrivalSpawn = spawn
 
-	-- The door slams once everyone in the server has come inside.
+	-- The door slams once everyone in the server has come inside, or a while after the first
+	-- one did.
 	task.spawn(function()
+		local firstInAt: number? = nil
 		while not closed do
 			task.wait(0.3)
 			local players = Players:GetPlayers()
 			local everyoneIn = #players > 0
+			local anyoneIn = false
 			for _, player in players do
-				local character = player.Character
-				local root = character and character:FindFirstChild("HumanoidRootPart")
-				if not root or not root:IsA("BasePart") or not insideParlor(root.Position) then
+				local root = rootOf(player)
+				if root and insideParlor(root.Position) then
+					anyoneIn = true
+				else
 					everyoneIn = false
 				end
 			end
 			if everyoneIn then
 				slam()
+			elseif anyoneIn then
+				firstInAt = firstInAt or os.clock()
+				if os.clock() - firstInAt > Config.Arrival.WaitSeconds then
+					Arrival.forceClose()
+				end
 			end
 		end
 	end)

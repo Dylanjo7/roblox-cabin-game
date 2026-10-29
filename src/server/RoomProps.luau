@@ -76,7 +76,7 @@ local function group(parent: Instance, name: string): Model
 	return m
 end
 
-local function light(parent: BasePart, range: number, brightness: number, color: Color3?)
+local function light(parent: BasePart, range: number, brightness: number, color: Color3?): PointLight
 	local l = Instance.new("PointLight")
 	l.Color = color or WARM
 	l.Range = range
@@ -84,6 +84,7 @@ local function light(parent: BasePart, range: number, brightness: number, color:
 	l.Shadows = true
 	l.Parent = parent
 	CollectionService:AddTag(l, "RoomLight")
+	return l
 end
 
 -- Floor position and facing. A prop's front faces -Z (north) at 0 degrees, +X at -90, -X at 90.
@@ -258,7 +259,15 @@ local function fireplace(parent: Instance, at: CFrame)
 		trim(m, "Log", Vector3.new(0.6, 0.6, 2.6), at * CFrame.new(x, 1, 0.4) * CFrame.Angles(0, math.rad(60 + i * 30), 0), DARK_WOOD)
 	end
 	local embers = trim(m, "Embers", Vector3.new(3.6, 0.4, 1), at * CFrame.new(0, 0.75, 0.4), Color3.fromRGB(255, 110, 40), Enum.Material.Neon)
-	light(embers, 20, 0.9, Color3.fromRGB(255, 130, 60))
+	-- Real flames over the logs, and their light dancing on the walls (tag "Firelight": each
+	-- client makes it flicker, client/Haunting).
+	local flames = Instance.new("Fire")
+	flames.Size = 3.2
+	flames.Heat = 6
+	flames.Color = Color3.fromRGB(255, 150, 60)
+	flames.SecondaryColor = Color3.fromRGB(200, 60, 20)
+	flames.Parent = embers
+	CollectionService:AddTag(light(embers, 20, 0.9, Color3.fromRGB(255, 130, 60)), "Firelight")
 	-- Things on the mantel.
 	for _, x in { -3.5, 3.5 } do
 		trim(m, "Candlestick", Vector3.new(0.3, 1.2, 0.3), at * CFrame.new(x, 7.2, 0), BRASS, Enum.Material.Metal)
@@ -606,26 +615,32 @@ local function dartboard(parent: Instance, at: CFrame)
 	bull.Shape = Enum.PartType.Cylinder
 end
 
+-- (Hanging lamps and chandeliers are grouped and tagged "HangingLamp", so each client can sway
+-- them on their chains: client/Haunting.)
 local function chandelier(parent: Instance, x: number, z: number)
 	local top = Config.Room.WallHeight
-	trim(parent, "ChandelierChain", Vector3.new(0.15, 3, 0.15), CFrame.new(x, top - 1.5, z), BRASS, Enum.Material.Metal)
-	local hub = ball(parent, "ChandelierHub", Vector3.new(1, 1, 1), CFrame.new(x, top - 3.2, z), BRASS, Enum.Material.Metal)
+	local m = group(parent, "Chandelier")
+	trim(m, "ChandelierChain", Vector3.new(0.15, 3, 0.15), CFrame.new(x, top - 1.5, z), BRASS, Enum.Material.Metal)
+	local hub = ball(m, "ChandelierHub", Vector3.new(1, 1, 1), CFrame.new(x, top - 3.2, z), BRASS, Enum.Material.Metal)
 	for i = 0, 5 do
 		local a = i * math.pi / 3
 		local arm = CFrame.new(x + math.cos(a) * 1.6, top - 3.3, z + math.sin(a) * 1.6)
-		trim(parent, "Arm", Vector3.new(0.12, 0.12, 1.6), CFrame.lookAt(CFrame.new(x, top - 3.3, z).Position, arm.Position) * CFrame.new(0, 0, -0.8), BRASS, Enum.Material.Metal)
-		trim(parent, "Candle", Vector3.new(0.2, 0.6, 0.2), arm * CFrame.new(0, 0.35, 0), LINEN, Enum.Material.SmoothPlastic)
-		ball(parent, "Flame", Vector3.new(0.18, 0.28, 0.18), arm * CFrame.new(0, 0.8, 0), WARM, Enum.Material.Neon)
+		trim(m, "Arm", Vector3.new(0.12, 0.12, 1.6), CFrame.lookAt(CFrame.new(x, top - 3.3, z).Position, arm.Position) * CFrame.new(0, 0, -0.8), BRASS, Enum.Material.Metal)
+		trim(m, "Candle", Vector3.new(0.2, 0.6, 0.2), arm * CFrame.new(0, 0.35, 0), LINEN, Enum.Material.SmoothPlastic)
+		ball(m, "Flame", Vector3.new(0.18, 0.28, 0.18), arm * CFrame.new(0, 0.8, 0), WARM, Enum.Material.Neon)
 	end
 	light(hub, Config.Room.LampRange, Config.Room.LampBrightness)
+	CollectionService:AddTag(m, "HangingLamp")
 end
 
 local function hangingLamp(parent: Instance, x: number, z: number, range: number?, brightness: number?)
 	local top = Config.Room.WallHeight
-	trim(parent, "LampChain", Vector3.new(0.15, 3, 0.15), CFrame.new(x, top - 1.5, z), IRON, Enum.Material.Metal)
-	trim(parent, "LampShade", Vector3.new(2.2, 0.6, 2.2), CFrame.new(x, top - 3.2, z), Color3.fromRGB(120, 92, 50), Enum.Material.Metal)
-	local bulb = ball(parent, "Bulb", Vector3.new(0.7, 0.7, 0.7), CFrame.new(x, top - 3.7, z), WARM, Enum.Material.Neon)
+	local m = group(parent, "HangingLamp")
+	trim(m, "LampChain", Vector3.new(0.15, 3, 0.15), CFrame.new(x, top - 1.5, z), IRON, Enum.Material.Metal)
+	trim(m, "LampShade", Vector3.new(2.2, 0.6, 2.2), CFrame.new(x, top - 3.2, z), Color3.fromRGB(120, 92, 50), Enum.Material.Metal)
+	local bulb = ball(m, "Bulb", Vector3.new(0.7, 0.7, 0.7), CFrame.new(x, top - 3.7, z), WARM, Enum.Material.Neon)
 	light(bulb, range or Config.Room.LampRange, brightness or Config.Room.LampBrightness)
+	CollectionService:AddTag(m, "HangingLamp")
 end
 
 ------------------------------------------------------------------------------------------------

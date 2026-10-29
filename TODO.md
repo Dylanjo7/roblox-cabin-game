@@ -173,6 +173,20 @@ RULES.md is the source of truth. MVP only for now.
   - Clue signs only go in built rooms, so a true clue always shows
   - Hush mutes the clue signs' sounds while it runs (the Music Box plays the same lullaby)
   - Result (bot): Normal ~55% wins at 1-4 players (was ~30%), Hard ~35%, Nightmare ~23%; a slower Hollow Man doesn't make runs longer (groups still go for 3:00 AM once they've solved it), only easier
+- [x] P. Smooth start to finish, models and animations, the night in numbers *(written, not yet run in Studio)*
+  - Nobody can stall the table (2+ players): each turn step has a limit (`Config.Turn`); when it runs out the game takes the step (starts the turn, takes the card, plays a card by priority, places the room at random, finishes a Peek or Swap). Anyone out of their chair is put back in it when a turn should start (`Table.seatPlayer`). The HUD counts down the last 12 s. Solo, the table still waits for you
+  - The front door slams 45 s after the first player is inside (`Config.Arrival`), and always when a run starts, so nobody is stuck waiting on a friend by the truck
+  - Safety nets: a phase handler or an event step that errors is logged and play carries on (`GameState.transition`, `EventRunner`); an event that can't set itself up fizzles with no penalty
+  - Fuse Box: if whoever has the fuse leaves or is out, it turns up again where it was found
+  - The Knock and He Walks: places under the Parlor table when there are more players than hiding spots
+  - No resetting your character during an event or the final escape (it could carry you out of the basement or a locked room)
+  - HUD messages stack (3 at once, a repeat extends the one showing) instead of replacing each other
+  - Hand: rebuilt only when it changes (no flicker); a played card flies up to the table, a dealt card slides in; scales down on short screens
+  - Scares hold off while a cutscene plays
+  - Table chairs rebuilt: turned legs, stretchers, a spindle back between posts with ball finials, a curved crest rail
+  - Animation (`client/Haunting`): hanging lamps sway, and swing on each of his steps and with the thunder; the Doll's head turns to watch you while you're not looking (and back once you've been away a while); the Music Box dancer twirls; the hearth has real flames and its light and every lantern flicker
+  - Storm (`client/Storm`, `Config.Storm`): lightning every 45-95 s (25-60 once he's on the clock, 10-25 on the last turn and at 3 AM), lighting the rooms near you through their windows; thunder 1-3 s later, muffled indoors and in the basement. The thunder is a stand-in (Deep Impacts 7 slowed right down, `Config.Sounds.thunder`) until a library thunder clip is picked
+  - The night in numbers (`server/RunStats`, `client/SummaryUI`): after the ending, a panel with the time it took, rounds, the Candle's time, rooms built, signs, notes, how each event went, the true exit, and a row per player (cards, rooms, signs, times caught, got out or not, and titles). `GameOverSeconds` 22 -> 36 to make room for it
 - [ ] C2: clue signs in rooms (lullaby audio still to find)
 - [ ] C3: Journal (M)
 - Clue decisions: the 9 defaults agreed on 2026-10-28 (sign placement, sign shown only while active, second copy re-rolls the spot, Tally 3 rooms 1-5 marks, Doll always appears/fake frowns after 3rd true clue, shared Journal with "Record" prompt, manual cross-out, exits not in deck yet, faked mirror)

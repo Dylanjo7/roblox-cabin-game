@@ -57,10 +57,21 @@ local Config = {
 	NoValidSpotPenaltySteps = 1, -- +30 min when a selected room has nowhere valid to go
 	PeekCount = 3,
 
-	GameOverSeconds = 22, -- how long the ending (its cutscene) shows before the table returns to the lobby
+	GameOverSeconds = 36, -- the ending's cutscene, then the night in numbers, before the table returns to the lobby
 	MaxPlayers = 4, -- also set the cabin place's Max Players to 4 on the Creator Dashboard
 	LobbyStartSeconds = 20, -- once someone sits, the run starts when everyone has, or after this
 	SwapChooseSeconds = 15, -- time to pick who to swap hands with (then the next player is picked)
+	-- With more than one player, nobody can hold the table up: if the player whose turn it is
+	-- doesn't act, the game does it for them after this long (each step has its own wait), and
+	-- anyone not in their chair when a turn should start is put back in it. Solo, it waits.
+	Turn = {
+		StartSeconds = 60, -- to press T (anyone still away from the table is brought back first)
+		DrawSeconds = 40, -- to take a card (or a clue)
+		PlaySeconds = 50, -- to pick a card to play
+		PlaceSeconds = 60, -- to put a room down
+		PeekSeconds = 40, -- to reorder a Peek
+		WarnSeconds = 12, -- the countdown shows on screen for this long before
+	},
 
 	-- Which card types go into the shuffled deck.
 	DeckTypes = {
@@ -433,6 +444,25 @@ local Config = {
 		Height = 14,
 	},
 
+	-- The walk up from the truck: once anyone is inside, the rest have this long before they're
+	-- brought in and the door slams anyway.
+	Arrival = {
+		WaitSeconds = 45,
+	},
+
+	-- Lightning over the pines (client/Storm): seconds between flashes, sooner as he closes in.
+	Storm = {
+		Gap = { 45, 95 }, -- before he's on the clock
+		GapHunting = { 25, 60 }, -- once he's on the track
+		GapOverhead = { 10, 25 }, -- the last turn, and three o'clock
+		WindowRange = 90, -- windows this close to you light up
+		MaxWindows = 6,
+		WindowBrightness = 7,
+		ScreenFlash = 0.22, -- how much the picture brightens at the peak (in a room with a window)
+		ThunderDelay = { 0.8, 3.2 }, -- seconds from the flash to the thunder
+		ThunderVolume = 0.7,
+	},
+
 	-- The front door: in the Parlor's south wall, beside (not in) the south doorway. X is the
 	-- world offset of its centre from the Parlor's centre.
 	FrontDoor = {
@@ -508,6 +538,7 @@ local Config = {
 		lullaby = "rbxassetid://9047785119", -- Music Box Lullaby (APM), the Music Box clue
 		ratchet = "rbxassetid://9118047781", -- Ratchet Wrench Gear Winding 3: a piece moving on the clock
 		tick = "rbxasset://sounds/clickfast.wav", -- built-in click, pitched down as the clocks' tick (swap for a library tick if you find a better one)
+		thunder = "rbxassetid://9114036511", -- Deep Impacts 7 again, slowed right down and muffled (client/Storm); swap for a library thunder clap if you find one
 	} :: { [string]: string },
 }
 

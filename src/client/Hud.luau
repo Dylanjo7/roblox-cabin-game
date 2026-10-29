@@ -1,9 +1,11 @@
 --!strict
--- Owns the screen GUI: one line of what to do next, the turn order in multiplayer, and short
--- messages that fade in and out. No clock: the time is only on the table.
+-- Owns the screen GUI: one line of what to do next, the turn order in multiplayer, a countdown
+-- when the game is about to take a step for someone (Config.Turn), and short messages that fade
+-- in and out (a few at once, newest at the bottom). No clock: the time is only on the table.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -19,8 +21,38 @@ local localPlayer = Players.LocalPlayer
 local screen: ScreenGui
 local statusLabel: TextLabel
 local orderLabel: TextLabel
-local toastLabel: TextLabel
-local toastToken = 0
+local timerLabel: TextLabel
+local toastList: Frame
+local toastCount = 0
+local lastState: Types.PublicState? = nil
+
+local MAX_TOASTS = 3
+
+-- "Back to your chair in 8s" and the like, once a step is close to happening by itself.
+local function countdown(): string
+	local state = lastState
+	local turn = state and state.turn
+	if not state or not turn or not turn.deadline or (state.phase ~= "TurnLoop" and state.phase ~= "Setup") then
+		return ""
+	end
+	local left = math.ceil(turn.deadline - workspace:GetServerTimeNow())
+	if left > Config.Turn.WarnSeconds or left < 0 then
+		return ""
+	end
+	local mine = turn.activeUserId == localPlayer.UserId
+	if turn.stage == "WaitingStart" then
+		for _, name in turn.unseated or {} do
+			if name == localPlayer.DisplayName then
+				return `Back to your chair in {left}s.`
+			end
+		end
+		return if mine then `Your turn starts by itself in {left}s.` else `{turn.activeName}'s turn starts in {left}s.`
+	end
+	if mine then
+		return `Out of time in {left}s: the game will choose for you.`
+	end
+	return `{turn.activeName} has {left}s.`
+end
 
 function Hud.init(): ScreenGui
 	screen = Instance.new("ScreenGui")
@@ -43,14 +75,32 @@ function Hud.init(): ScreenGui
 	orderLabel.Position = UDim2.new(0.5, 0, 0, 76)
 	orderLabel.Size = UDim2.new(0.6, 0, 0, 18)
 	orderLabel.TextTransparency = 0.3
-	-- Messages fade in a third of the way down and fade away.
-	toastLabel = Style.text(screen, "Toast", Style.Body, 24)
-	toastLabel.AnchorPoint = Vector2.new(0.5, 0.5)
-	toastLabel.Position = UDim2.fromScale(0.5, 0.3)
-	toastLabel.Size = UDim2.new(0.55, 0, 0, 64)
-	toastLabel.TextTransparency = 1
-	toastLabel.TextStrokeTransparency = 1
+	-- The countdown before the game takes a step for someone, in red under that.
+	timerLabel = Style.text(screen, "Timer", Style.Body, 18)
+	timerLabel.AnchorPoint = Vector2.new(0.5, 0)
+	timerLabel.Position = UDim2.new(0.5, 0, 0, 96)
+	timerLabel.Size = UDim2.new(0.6, 0, 0, 22)
+	timerLabel.TextColor3 = Style.Blood
+	timerLabel.Text = ""
+	-- Messages fade in a quarter of the way down, stack (newest last) and fade away.
+	toastList = Instance.new("Frame")
+	toastList.Name = "Toasts"
+	toastList.AnchorPoint = Vector2.new(0.5, 0)
+	toastList.Position = UDim2.fromScale(0.5, 0.24)
+	toastList.Size = UDim2.new(0.55, 0, 0, 0)
+	toastList.AutomaticSize = Enum.AutomaticSize.Y
+	toastList.BackgroundTransparency = 1
+	toastList.Parent = screen
+	local layout = Instance.new("UIListLayout")
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	layout.Padding = UDim.new(0, 4)
+	layout.Parent = toastList
 	screen.Parent = localPlayer:WaitForChild("PlayerGui")
+
+	RunService.Heartbeat:Connect(function()
+		timerLabel.Text = countdown()
+	end)
 	return screen
 end
 
@@ -109,6 +159,7 @@ local function instruction(state: Types.PublicState): string
 end
 
 function Hud.setState(state: Types.PublicState)
+	lastState = state
 	statusLabel.Text = instruction(state)
 	local order = state.turn and state.turn.order
 	if state.phase == "TurnLoop" and order and #order > 1 then
@@ -124,14 +175,42 @@ function Hud.setState(state: Types.PublicState)
 end
 
 function Hud.toast(text: string)
-	toastToken += 1
-	local token = toastToken
-	toastLabel.Text = text
-	local fadeIn = TweenInfo.new(0.25)
-	TweenService:Create(toastLabel, fadeIn, { TextTransparency = 0, TextStrokeTransparency = 0.35 }):Play()
-	task.delay(Config.UI.ToastSeconds, function()
-		if toastToken == token then
-			TweenService:Create(toastLabel, TweenInfo.new(0.8), { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
+	local showing: { TextLabel } = {}
+	for _, child in toastList:GetChildren() do
+		if child:IsA("TextLabel") then
+			if child.Text == text then
+				-- The same message again just stays up longer.
+				child:SetAttribute("Until", os.clock() + Config.UI.ToastSeconds)
+				return
+			end
+			table.insert(showing, child)
+		end
+	end
+	if #showing >= MAX_TOASTS then
+		table.sort(showing, function(a: TextLabel, b: TextLabel)
+			return a.LayoutOrder < b.LayoutOrder
+		end)
+		showing[1]:Destroy() -- the oldest makes room
+	end
+	toastCount += 1
+	local label = Style.text(toastList, "Toast", Style.Body, 22)
+	label.LayoutOrder = toastCount
+	label.Size = UDim2.new(1, 0, 0, 28)
+	label.AutomaticSize = Enum.AutomaticSize.Y
+	label.Text = text
+	label.TextTransparency = 1
+	label.TextStrokeTransparency = 1
+	label:SetAttribute("Until", os.clock() + Config.UI.ToastSeconds)
+	TweenService:Create(label, TweenInfo.new(0.25), { TextTransparency = 0, TextStrokeTransparency = 0.35 }):Play()
+	task.spawn(function()
+		while label.Parent and os.clock() < ((label:GetAttribute("Until") :: number?) or 0) do
+			task.wait(0.2)
+		end
+		if label.Parent then
+			local fade = TweenService:Create(label, TweenInfo.new(0.8), { TextTransparency = 1, TextStrokeTransparency = 1 })
+			fade:Play()
+			fade.Completed:Wait()
+			label:Destroy()
 		end
 	end)
 end

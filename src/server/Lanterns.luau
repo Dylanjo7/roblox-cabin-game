@@ -4,6 +4,7 @@
 -- It isn't tagged RoomLight, so it doesn't flicker with the house lights. Its flame is the
 -- player's LanternColour (attribute; set by Shop: Ember, or a colour from the Lantern Colours pass).
 
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -100,6 +101,7 @@ local function build(): Tool
 	light.Brightness = Config.Lantern.Brightness
 	light.Shadows = true
 	light.Parent = flame
+	CollectionService:AddTag(flame, "LanternFlame") -- each client makes it flicker (client/Haunting)
 	return tool
 end
 

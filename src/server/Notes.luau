@@ -115,6 +115,11 @@ function Notes.reset()
 	StateSync.broadcast()
 end
 
+-- How many notes have been read this run.
+function Notes.foundCount(): number
+	return #found
+end
+
 function Notes.init()
 	folder = Instance.new("Folder")
 	folder.Name = "Notes"

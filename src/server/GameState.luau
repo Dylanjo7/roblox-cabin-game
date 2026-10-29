@@ -60,8 +60,12 @@ function GameState.transition(to: Phase)
 	assert(ALLOWED[from][to], `Illegal phase change {from} -> {to}`)
 	current = to
 	changed:Fire(to, from)
+	-- One handler failing mustn't stop the others (the next run's countdown, say) from running.
 	for _, handler in enterHandlers[to] or {} do
-		handler(from)
+		local ok, err = pcall(handler, from)
+		if not ok then
+			warn(`Hollow Pines: entering {to} failed: {err}`)
+		end
 	end
 end
 

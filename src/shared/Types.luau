@@ -31,6 +31,7 @@ export type TurnPublic = {
 	placingId: string?, -- the committed room being placed (played cards are public)
 	order: { string }?, -- display names in turn order
 	unseated: { string }?, -- players in the run who aren't at the table yet
+	deadline: number?, -- server time this step happens by itself (multiplayer; see Config.Turn)
 }
 
 export type CellPublic = {
@@ -112,6 +113,32 @@ export type ResultPublic = {
 	ending: string, -- key into Story.Endings
 }
 
+-- One player's night, in the end-of-run summary.
+export type SummaryPlayer = {
+	name: string,
+	cards: number, -- cards played
+	rooms: number, -- rooms placed
+	clues: number, -- signs written in the Journal
+	caught: number, -- times caught in events
+	escaped: number?, -- got out through the true exit: 1 for the first one out, 2 next...
+	left: boolean, -- left the game before the end
+}
+
+-- The night in numbers, shown after the ending (only once the run is over).
+export type SummaryPublic = {
+	minutes: number, -- how long it took, in real minutes
+	rounds: number,
+	rooms: number, -- rooms built, not counting the Parlor
+	clues: number, -- signs written in the Journal
+	notes: number, -- story notes found
+	candle: string, -- the time the Candle got to, e.g. "2:40 AM"
+	trueExit: string?, -- the way out, named at last
+	events: { { name: string, caught: number } }, -- in the order they came up
+	players: { SummaryPlayer },
+	nextAt: number, -- server time the table resets (or the party goes back to the station)
+	toStation: boolean, -- back to the ranger station, not this cabin's table
+}
+
 export type PublicState = {
 	phase: Phase,
 	turn: TurnPublic?,
@@ -125,6 +152,7 @@ export type PublicState = {
 	journal: JournalPublic?,
 	notes: { number }?, -- Story.Notes indexes found so far this run, in the order they were read
 	difficulty: DifficultyPublic?,
+	summary: SummaryPublic?, -- only once the run is over
 }
 
 return {}

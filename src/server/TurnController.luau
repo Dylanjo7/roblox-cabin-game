@@ -2,6 +2,9 @@
 -- Owns turn order, the active player and the current turn stage, and validates every turn intent:
 -- start (T), take a card, pick a card to play (committed from then on), and place a room.
 -- A round is one turn for every player in the run; the Clock resolves the Hollow Man at each turn end.
+-- With more than one player nobody can hold the table up: each step of a turn has a wait
+-- (Config.Turn), after which the game takes it for them, and anyone not in their chair when a
+-- turn should start is put back in it. (Solo, the table waits for you.)
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -19,6 +22,7 @@ local EventRunner = require(script.Parent.EventRunner)
 local GameState = require(script.Parent.GameState)
 local Hands = require(script.Parent.Hands)
 local RoomPlacement = require(script.Parent.RoomPlacement)
+local RunStats = require(script.Parent.RunStats)
 local StateSync = require(script.Parent.StateSync)
 local Table = require(script.Parent.Table)
 
@@ -40,6 +44,9 @@ local round = 1
 local pending: PendingPlacement? = nil
 local roundEnded = Instance.new("BindableEvent")
 local clockToken = 0 -- cancels a pending start after the table animation (run reset)
+local homeSeat: { [Player]: number } = {} -- the chair each player last sat in this run
+local deadline: number? = nil -- server time the current step happens by itself (public)
+local timerToken = 0 -- bumped whenever the step changes, cancelling its timer
 
 -- Fires (finishedRound: number) after every player in the run has taken a turn.
 TurnController.RoundEnded = roundEnded.Event
@@ -64,6 +71,11 @@ function TurnController.activePlayer(): Player?
 	return order[activeIndex]
 end
 
+-- The round being played (the first is 1).
+function TurnController.round(): number
+	return round
+end
+
 function TurnController.stage(): TurnStage
 	return stage
 end
@@ -79,8 +91,59 @@ function TurnController.beginRun(players: { Player })
 	round = 1
 	stage = "WaitingStart"
 	pending = nil
+	homeSeat = {}
+	for _, p in order do
+		homeSeat[p] = Table.seatOf(p)
+	end
 	faceActive()
 	StateSync.broadcast()
+end
+
+-- No step is waiting to happen by itself.
+local function disarm()
+	timerToken += 1
+	deadline = nil
+end
+
+-- Do `act` for the active player if this step is still going after `seconds` (only when more
+-- than one player is in the run).
+local function arm(seconds: number, act: () -> ())
+	timerToken += 1
+	deadline = nil
+	if #order < 2 then
+		return
+	end
+	local token = timerToken
+	deadline = workspace:GetServerTimeNow() + seconds
+	task.delay(seconds, function()
+		if token ~= timerToken then
+			return
+		end
+		deadline = nil
+		local ok, err = pcall(act)
+		if not ok then
+			warn(`Hollow Pines: taking a turn step automatically failed: {err}`)
+		end
+		StateSync.broadcast()
+	end)
+end
+
+-- What the game does when a step's wait runs out (filled in below, once the handlers exist).
+local auto = {} :: {
+	start: () -> (),
+	draw: () -> (),
+	play: () -> (),
+	place: () -> (),
+	finishEffect: () -> (),
+}
+
+-- Everyone in the run who isn't in a chair is put back in theirs.
+local function recallUnseated()
+	for _, p in order do
+		if Table.seatOf(p) == nil and Table.seatPlayer(p, homeSeat[p]) then
+			Remotes.notify(p, "The table won't wait any longer. You're back in your chair.")
+		end
+	end
 end
 
 -- A player left mid-run: take them out of the turn order. Returns false if nobody is left.
@@ -151,6 +214,8 @@ function TurnController.reset()
 	stage = "WaitingStart"
 	pending = nil
 	clockToken += 1
+	disarm()
+	homeSeat = {}
 	CardEffects.reset()
 	StateSync.broadcast()
 end
@@ -160,12 +225,16 @@ function TurnController.startNextTurn()
 	stage = "WaitingStart"
 	Clock.startTurn()
 	faceActive()
+	arm(Config.Turn.StartSeconds, function()
+		auto.start()
+	end)
 	StateSync.broadcast()
 end
 
 -- Finish the current turn: the Clock checks 3 AM, the last-turn rule and the Hollow Man,
 -- then play passes to the next player (in solo it comes back to you).
 function TurnController.endTurn()
+	disarm()
 	activeIndex += 1
 	local finished: number? = nil
 	if activeIndex > #order then
@@ -216,6 +285,9 @@ function TurnController.requirePlacement(player: Player, card: Card, onPlaced: (
 	pending = { player = player, card = card, onPlaced = onPlaced }
 	stage = "Placing"
 	sendPlacementOptions(player, { cardId = card.id, placements = placements })
+	arm(Config.Turn.PlaceSeconds, function()
+		auto.place()
+	end)
 	StateSync.broadcast()
 	return true
 end
@@ -244,6 +316,40 @@ local function isActiveTurn(player: Player, wantStage: TurnStage): (boolean, str
 	return true, nil
 end
 
+-- The turn is under way: take a card (or a clue), or play straight from your hand when there's
+-- nothing left to take.
+local function beginTurn(player: Player)
+	if Deck.count() > 0 then
+		stage = "Draw"
+		if Altar.count() > 0 then
+			Remotes.notify(player, "Turn started. Take a card from the draw slot, or a clue off the Altar.")
+		else
+			Remotes.notify(player, "Turn started. Take a card from the draw slot.")
+		end
+		arm(Config.Turn.DrawSeconds, function()
+			auto.draw()
+		end)
+	elseif Altar.count() > 0 then
+		-- With the deck gone, the only card you can take is a clue off the Altar (or none).
+		stage = "Draw"
+		Remotes.notify(player, "The deck is empty. Take a clue off the Altar, or play a card from your hand.")
+		arm(Config.Turn.PlaySeconds, function()
+			auto.play()
+		end)
+	elseif #Hands.get(player) > 0 then
+		stage = "Play"
+		Remotes.notify(player, "The deck is empty. Play a card from your hand.")
+		arm(Config.Turn.PlaySeconds, function()
+			auto.play()
+		end)
+	else
+		Remotes.notify(player, "The deck is empty and your hand is empty. Your turn passes.")
+		TurnController.endTurn()
+		return
+	end
+	StateSync.broadcast()
+end
+
 local function onRequestStartTurn(player: Player)
 	if GameState.get() ~= "TurnLoop" then
 		Remotes.notify(player, "There's no run in progress. Sit at the Parlor table to begin.")
@@ -270,33 +376,14 @@ local function onRequestStartTurn(player: Player)
 		Remotes.notify(player, `Everyone has to be seated first. Waiting for {table.concat(standing, ", ")}.`)
 		return
 	end
-
-	if Deck.count() > 0 then
-		stage = "Draw"
-		if Altar.count() > 0 then
-			Remotes.notify(player, "Turn started. Take a card from the draw slot, or a clue off the Altar.")
-		else
-			Remotes.notify(player, "Turn started. Take a card from the draw slot.")
-		end
-	elseif Altar.count() > 0 then
-		-- With the deck gone, the only card you can take is a clue off the Altar (or none).
-		stage = "Draw"
-		Remotes.notify(player, "The deck is empty. Take a clue off the Altar, or play a card from your hand.")
-	elseif #Hands.get(player) > 0 then
-		stage = "Play"
-		Remotes.notify(player, "The deck is empty. Play a card from your hand.")
-	else
-		Remotes.notify(player, "The deck is empty and your hand is empty. Your turn passes.")
-		TurnController.endTurn()
-		return
-	end
-	StateSync.broadcast()
+	beginTurn(player)
 end
 
 -- An Event card starts the moment it's drawn: it flies face up from the draw slot onto the ring,
 -- everyone is pulled from the table, and onDone runs once they're all back in their seats.
 local function runEvent(card: Card, onDone: () -> ())
 	local def = CardData.get(card.id)
+	disarm() -- the event has its own clock
 	Table.addPlayedCard(card.id, nil, true)
 	for _, p in order do
 		Remotes.notify(p, `Event: {def.name}! {def.text}`)
@@ -344,6 +431,9 @@ local function onRequestDraw(player: Player): (boolean, string?)
 	Table.animateDraw(player)
 	Hands.add(player, card)
 	stage = "Play"
+	arm(Config.Turn.PlaySeconds, function()
+		auto.play()
+	end)
 	StateSync.broadcast()
 	return true, nil
 end
@@ -367,6 +457,9 @@ local function onRequestTakeClue(player: Player, uid: any): (boolean, string?)
 		Remotes.notify(p, `{player.DisplayName} took {CardData.get(card.id).name} back off the Altar.`)
 	end
 	stage = "Play"
+	arm(Config.Turn.PlaySeconds, function()
+		auto.play()
+	end)
 	StateSync.broadcast()
 	return true, nil
 end
@@ -399,6 +492,8 @@ local function onRequestSelectCard(player: Player, uid: any): (boolean, string?)
 
 	-- Committed: the card leaves the hand now and can't go back.
 	local card = Hands.take(player, uid) :: Card
+	disarm()
+	RunStats.count(player, "cards")
 
 	if def.type == "Clue" then
 		-- Onto the top of the Altar: it's the active clue now.
@@ -418,6 +513,9 @@ local function onRequestSelectCard(player: Player, uid: any): (boolean, string?)
 			-- Events drawn by the effect (Second Wind) start now, then the turn ends.
 			runEvents(CardEffects.takeDrawnEvents(), TurnController.endTurn)
 		else
+			arm(Config.Turn.PeekSeconds, function()
+				auto.finishEffect()
+			end)
 			TurnController.setStage("Peeking")
 		end
 		return true, nil
@@ -443,8 +541,10 @@ local function onRequestPlaceRoom(player: Player, x: any, z: any, rotation: any)
 	if not RoomPlacement.isValid(current.card.id, x, z, rotation) then
 		return false, "The room doesn't fit there. One of its doorways must line up with an open doorway."
 	end
+	disarm()
 	RoomPlacement.place(current.card.id, x, z, rotation)
 	Table.addPlayedCard(current.card.id, player)
+	RunStats.count(player, "rooms")
 	if current.card.id == "bathroom" then
 		-- The Bathroom unlocks the Attic: its red card goes into the deck somewhere.
 		Deck.insertRandom(Deck.newCard("attic"))
@@ -457,6 +557,98 @@ local function onRequestPlaceRoom(player: Player, x: any, z: any, rotation: any)
 	current.onPlaced()
 	StateSync.broadcast()
 	return true, nil
+end
+
+-- The card played for someone whose time ran out: a Progress card on a last turn (anything else
+-- loses the run), otherwise an exit room, then a clue, a room, and a Progress card last.
+local PRIORITY: { [string]: number } = { Exit = 4, Clue = 3, Room = 2, Progress = 1 }
+local function pickFor(player: Player): Card?
+	local best: Card? = nil
+	local bestScore = -1
+	for _, card in Hands.get(player) do
+		local def = CardData.get(card.id)
+		local score = PRIORITY[if def.type == "Room" and def.exit then "Exit" else def.type] or 0
+		if Clock.isLastTurn() and def.type == "Progress" then
+			score = 10
+		end
+		if score > bestScore then
+			best, bestScore = card, score
+		end
+	end
+	return best
+end
+
+auto.start = function()
+	local player = order[activeIndex]
+	if not player or stage ~= "WaitingStart" or GameState.get() ~= "TurnLoop" then
+		return
+	end
+	recallUnseated()
+	task.wait(0.5) -- a moment for the chairs to take everyone
+	if stage ~= "WaitingStart" or order[activeIndex] ~= player or GameState.get() ~= "TurnLoop" then
+		return
+	end
+	Remotes.notify(player, "The box won't wait: your turn has started.")
+	beginTurn(player)
+end
+
+auto.draw = function()
+	local player = order[activeIndex]
+	if not player or stage ~= "Draw" then
+		return
+	end
+	if Deck.count() > 0 then
+		Remotes.notify(player, "Out of time: you take the card from the box.")
+		onRequestDraw(player)
+	else
+		auto.play()
+	end
+end
+
+auto.play = function()
+	local player = order[activeIndex]
+	if not player or (stage ~= "Play" and stage ~= "Draw") then
+		return
+	end
+	local card = pickFor(player)
+	if card then
+		Remotes.notify(player, `Out of time: you play {CardData.get(card.id).name}.`)
+		onRequestSelectCard(player, card.uid)
+		return
+	end
+	-- Nothing in hand: a clue off the Altar if there is one, or the turn passes.
+	local top = Altar.top()
+	if stage == "Draw" and top then
+		onRequestTakeClue(player, top.uid)
+	else
+		TurnController.endTurn()
+	end
+end
+
+auto.place = function()
+	local current = pending
+	if not current or stage ~= "Placing" then
+		return
+	end
+	local placements = RoomPlacement.findAll(current.card.id)
+	local name = CardData.get(current.card.id).name
+	if #placements == 0 then
+		-- (Can't happen: it had somewhere to go when it was played.) Lose it rather than hang.
+		pending = nil
+		sendPlacementOptions(current.player, nil)
+		current.onPlaced()
+		return
+	end
+	local spot = placements[math.random(1, #placements)]
+	Remotes.notify(current.player, `Out of time: the {name} is put down for you.`)
+	onRequestPlaceRoom(current.player, spot.x, spot.z, spot.rotation)
+end
+
+auto.finishEffect = function()
+	local player = order[activeIndex]
+	if player and stage == "Peeking" then
+		CardEffects.finishFor(player)
+	end
 end
 
 function TurnController.init()
@@ -476,6 +668,9 @@ function TurnController.init()
 
 	-- Keep the stand pointed at the active player if they change seats.
 	Table.SeatChanged:Connect(function(seatIndex: number, player: Player?)
+		if player ~= nil and table.find(order, player) then
+			homeSeat[player] = seatIndex
+		end
 		if player ~= nil and player == order[activeIndex] then
 			Table.faceSeat(seatIndex)
 		end
@@ -498,6 +693,7 @@ function TurnController.init()
 			placingId = pending and pending.card.id,
 			order = names,
 			unseated = TurnController.unseated(),
+			deadline = deadline,
 		}
 	end)
 	StateSync.register("deckCount", Deck.count)

@@ -55,6 +55,11 @@ function Clock.candle(): number
 	return candle
 end
 
+-- The turn being played is a last turn (he has caught the Candle): it must move or the run is lost.
+function Clock.isLastTurn(): boolean
+	return lastTurn
+end
+
 -- Call when a new turn begins.
 function Clock.startTurn()
 	movedThisTurn = false

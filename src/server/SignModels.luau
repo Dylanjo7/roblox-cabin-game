@@ -69,8 +69,9 @@ function SignModels.musicBox(parent: Instance, at: CFrame): Model
 	part(m, "Velvet", Vector3.new(1.1, 0.05, 0.7), at * CFrame.new(0, 0.6, 0), Color3.fromRGB(120, 20, 30), Enum.Material.Fabric)
 	part(m, "Lid", Vector3.new(1.3, 0.08, 0.9), at * CFrame.new(0, 0.95, 0.45) * CFrame.Angles(math.rad(-75), 0, 0) * CFrame.new(0, 0, -0.45), Color3.fromRGB(70, 40, 30), Enum.Material.Wood)
 	part(m, "LidMirror", Vector3.new(1, 0.02, 0.6), at * CFrame.new(0, 0.95, 0.45) * CFrame.Angles(math.rad(-75), 0, 0) * CFrame.new(0, -0.05, -0.45), Color3.fromRGB(170, 180, 186), Enum.Material.Glass)
-	part(m, "Dancer", Vector3.new(0.1, 0.35, 0.1), at * CFrame.new(0, 0.82, 0), Color3.fromRGB(230, 220, 214))
-	part(m, "Skirt", Vector3.new(0.24, 0.06, 0.24), at * CFrame.new(0, 0.78, 0), Color3.fromRGB(230, 200, 210), Enum.Material.Fabric)
+	-- The dancer turns on her spindle (tag "Twirl": each client turns her).
+	CollectionService:AddTag(part(m, "Dancer", Vector3.new(0.1, 0.35, 0.1), at * CFrame.new(0, 0.82, 0), Color3.fromRGB(230, 220, 214)), "Twirl")
+	CollectionService:AddTag(part(m, "Skirt", Vector3.new(0.24, 0.06, 0.24), at * CFrame.new(0, 0.78, 0), Color3.fromRGB(230, 200, 210), Enum.Material.Fabric), "Twirl")
 	part(m, "Key", Vector3.new(0.4, 0.15, 0.05), at * CFrame.new(0.75, 0.3, 0), Color3.fromRGB(150, 120, 60), Enum.Material.Metal)
 	local sound = Instance.new("Sound")
 	sound.SoundId = Config.Sounds.lullaby or ""
@@ -236,6 +237,8 @@ function SignModels.doll(parent: Instance, spot: Vector3, toward: Vector3, frown
 		part(m, "Eye", Vector3.new(0.09, 0.09, 0.02), head.CFrame * CFrame.new(side * 0.14, 0.07, -0.34), Color3.fromRGB(10, 10, 10), Enum.Material.Fabric)
 	end
 	mouth(m, frown)
+	-- Each client turns its head to watch you when you're not looking (client/Haunting).
+	CollectionService:AddTag(m, "WatchingDoll")
 	return m
 end
 

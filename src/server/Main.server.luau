@@ -15,6 +15,7 @@ for _, container in { workspace, ServerStorage } do
 end
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local ClockUtil = require(Shared:WaitForChild("ClockUtil"))
 local Config = require(Shared:WaitForChild("Config"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
 Remotes.init()
@@ -37,6 +38,7 @@ local Hands = require(script.Parent.Hands)
 local MapGrid = require(script.Parent.MapGrid)
 local Notes = require(script.Parent.Notes)
 local Party = require(script.Parent.Party)
+local RunStats = require(script.Parent.RunStats)
 local Secrets = require(script.Parent.Secrets)
 local Setup = require(script.Parent.Setup)
 local Shop = require(script.Parent.Shop)
@@ -69,6 +71,7 @@ StateSync.init()
 StateSync.register("phase", GameState.get)
 StateSync.register("cabin", MapGrid.publicCells)
 StateSync.register("result", GameState.getResult)
+StateSync.register("summary", RunStats.public)
 Clock.init()
 Altar.init()
 -- Keep the stack on the stand in step with the Altar (after a played clue has landed).
@@ -107,6 +110,8 @@ end)
 local pendingPlayers: { Player } = {}
 
 GameState.onEnter("Setup", function()
+	-- Nobody starts a run with the front door still open (or a friend still out by the truck).
+	Arrival.forceClose()
 	Badges.awardAll(pendingPlayers, "FirstNight")
 	Setup.run(pendingPlayers)
 end)
@@ -114,6 +119,7 @@ end)
 GameState.onEnter("Lobby", function(from)
 	EventRunner.abort()
 	TurnController.reset()
+	RunStats.clear()
 	-- Out of the chairs, so the next run starts only when people sit down again.
 	Table.standAll()
 	if from == "GameOver" then
@@ -162,6 +168,19 @@ GameState.onEnter("GameOver", function()
 	if result and not result.won then
 		Badges.awardAll(TurnController.players(), "Caught")
 	end
+	-- The night in numbers, for everyone to see once the ending has played (and the way out,
+	-- named at last).
+	local exit = Secrets.trueExit()
+	RunStats.finish({
+		rounds = TurnController.round(),
+		rooms = #MapGrid.all() - 1,
+		notes = Notes.foundCount(),
+		candle = ClockUtil.stepToText(Clock.candle()),
+		trueExit = exit and exit.name,
+		nextAt = workspace:GetServerTimeNow() + Config.GameOverSeconds,
+		toStation = Party.isReserved(),
+	})
+	StateSync.broadcast()
 	task.delay(Config.GameOverSeconds, function()
 		if GameState.get() ~= "GameOver" then
 			return

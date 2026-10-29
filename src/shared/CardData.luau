@@ -177,7 +177,7 @@ local CARDS: { CardDef } = {
 		name = "The Knock",
 		type = "Event",
 		inDeck = true,
-		text = "Something knocks at the front door. Every player must be hidden in a closet or under a bed when it opens.",
+		text = "Something knocks at the front door. Every player must be hidden in a wardrobe or under a bed (or the Parlor table) when it opens.",
 	},
 	{
 		id = "candlelight",

@@ -31,6 +31,7 @@ local Types = require(Shared:WaitForChild("Types"))
 
 local Audio = require(script.Parent.Audio)
 local BoardUI = require(script.Parent.BoardUI)
+local Cinema = require(script.Parent.Cinema)
 local Hud = require(script.Parent.Hud)
 local HollowManRig = require(script.Parent.HollowManRig)
 local HollowManView = require(script.Parent.HollowManView)
@@ -71,6 +72,7 @@ local function ready(): boolean
 		and (phase == "TurnLoop" or phase == "Event")
 		and hollow ~= nil
 		and not seated()
+		and not Cinema.isPlaying()
 		and os.clock() - lastScare > cfg.MinGapSeconds * gapScale
 		and root() ~= nil
 end
@@ -82,7 +84,7 @@ end
 
 -- At the table (and not placing a room): the empty chair can happen.
 local function readySeated(): boolean
-	return not busy and phase == "TurnLoop" and hollow ~= nil and seated() and not BoardUI.isViewing() and os.clock() - lastScare > cfg.MinGapSeconds
+	return not busy and phase == "TurnLoop" and hollow ~= nil and seated() and not BoardUI.isViewing() and not Cinema.isPlaying() and os.clock() - lastScare > cfg.MinGapSeconds * gapScale
 end
 
 -- A sharp jolt of the camera.

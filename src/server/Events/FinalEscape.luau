@@ -20,6 +20,7 @@ local RoomShapes = require(Shared:WaitForChild("RoomShapes"))
 local Types = require(Shared:WaitForChild("Types"))
 
 local MapGrid = require(script.Parent.Parent.MapGrid)
+local RunStats = require(script.Parent.Parent.RunStats)
 local Secrets = require(script.Parent.Parent.Secrets)
 local EventKit = require(script.Parent.EventKit)
 local HeWalks = require(script.Parent.HeWalks)
@@ -55,6 +56,7 @@ end
 
 local function escape(run: EventRun, player: Player, cell: MapGrid.Cell)
 	run.safe[player] = true
+	RunStats.escaped(player)
 	table.insert(escapedNames, player.DisplayName)
 	table.insert(escapedPlayers, player)
 	local character = player.Character

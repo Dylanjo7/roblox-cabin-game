@@ -120,6 +120,30 @@ function Table.standAll()
 	end
 end
 
+-- Put a player in a chair: their own (`index`) if it's free, otherwise the first free one.
+-- Returns false if there's no free chair or they have no character to sit.
+function Table.seatPlayer(player: Player, index: number?): boolean
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not character or not humanoid or humanoid.Health <= 0 or not root or not root:IsA("BasePart") then
+		return false
+	end
+	local chosen = index
+	if chosen == nil or seats[chosen] == nil or (seats[chosen].Occupant ~= nil and seats[chosen].Occupant ~= humanoid) then
+		chosen = Table.freeSeat()
+	end
+	if chosen == nil then
+		return false
+	end
+	local seat = seats[chosen]
+	root.Anchored = false
+	seat.Disabled = false
+	character:PivotTo(seat.CFrame * CFrame.new(0, 3, 0))
+	seat:Sit(humanoid)
+	return true
+end
+
 function Table.seatOf(player: Player): number?
 	for i, seat in seats do
 		if playerIn(seat) == player then
@@ -464,16 +488,51 @@ function Table.build()
 		seats[i] = seat
 
 		if not (chairTemplate and chairTemplate:IsA("BasePart")) then
-			-- Built chair: a tall slatted back and four legs (the seat faces the table, -Z).
+			-- Built chair (the seat faces the table, -Z): turned legs joined by stretchers, a
+			-- plank seat under the cushion, and a tall back of spindles between two posts with
+			-- ball finials, under a crest rail that curves round you. One plain invisible slab
+			-- does the back's colliding, so you don't snag on the spindles.
 			local chair = Instance.new("Model")
 			chair.Name = `Chair{i}`
-			makePart("Back", Vector3.new(2.2, 3.6, 0.3), seat.CFrame * CFrame.new(0, 2.2, 1.05), SEAT, chair)
-			makePart("BackTop", Vector3.new(2.5, 0.4, 0.45), seat.CFrame * CFrame.new(0, 4.1, 1.05), DARK_WOOD, chair)
-			for _, x in { -0.85, 0.85 } do
-				for _, z in { -0.85, 0.85 } do
-					makePart("Leg", Vector3.new(0.3, 0.6, 0.3), seat.CFrame * CFrame.new(x, -0.6, z), DARK_WOOD, chair).CanCollide = false
-				end
+			local at = seat.CFrame
+			local function trim(name: string, size: Vector3, cf: CFrame, color: Color3): Part
+				local p = makePart(name, size, cf, color, chair)
+				p.CanCollide = false
+				return p
 			end
+			local function rod(name: string, radius: number, length: number, cf: CFrame, color: Color3): Part
+				local p = makeCylinder(name, radius, length, cf, color, chair)
+				p.CanCollide = false
+				return p
+			end
+			trim("SeatBoard", Vector3.new(2.2, 0.2, 2.1), at * CFrame.new(0, -0.24, 0.05), SEAT)
+			trim("SeatEdge", Vector3.new(2.26, 0.08, 0.12), at * CFrame.new(0, -0.18, -1.0), DARK_WOOD)
+			for _, x in { -0.92, 0.92 } do
+				for _, z in { -0.88, 0.92 } do
+					rod("Leg", 0.12, 0.62, at * CFrame.new(x, -0.65, z), DARK_WOOD)
+					rod("LegTurn", 0.16, 0.12, at * CFrame.new(x, -0.52, z), DARK_WOOD)
+				end
+				trim("Stretcher", Vector3.new(0.1, 0.1, 1.78), at * CFrame.new(x, -0.64, 0.02), DARK_WOOD)
+			end
+			trim("Stretcher", Vector3.new(1.84, 0.1, 0.1), at * CFrame.new(0, -0.6, -0.88), DARK_WOOD)
+			-- The back, leaning away from the table a little.
+			local back = at * CFrame.new(0, -0.1, 0.98) * CFrame.Angles(math.rad(7), 0, 0)
+			for _, x in { -0.95, 0.95 } do
+				rod("BackPost", 0.13, 4.3, back * CFrame.new(x, 2.1, 0), DARK_WOOD)
+				local finial = trim("Finial", Vector3.new(0.34, 0.34, 0.34), back * CFrame.new(x, 4.38, 0), DARK_WOOD)
+				finial.Shape = Enum.PartType.Ball
+			end
+			for _, x in { -0.5, -0.17, 0.17, 0.5 } do
+				rod("Spindle", 0.055, 2.9, back * CFrame.new(x, 2.15, 0), SEAT)
+			end
+			trim("LowRail", Vector3.new(1.9, 0.18, 0.16), back * CFrame.new(0, 0.62, 0), DARK_WOOD)
+			-- The crest rail in three pieces, the ends turned forward.
+			trim("CrestRail", Vector3.new(1.1, 0.42, 0.2), back * CFrame.new(0, 3.75, 0.02), SEAT)
+			for _, side in { -1, 1 } do
+				trim("CrestRail", Vector3.new(0.6, 0.36, 0.2), back * CFrame.new(side * 0.78, 3.7, -0.06) * CFrame.Angles(0, math.rad(side * -18), 0), SEAT)
+			end
+			local block = makePart("BackBlock", Vector3.new(2.2, 3.6, 0.3), back * CFrame.new(0, 2.2, 0), SEAT, chair)
+			block.Transparency = 1
 			chair.Parent = model
 		else
 			seat.Transparency = 1 -- the chair model shows; this only seats you

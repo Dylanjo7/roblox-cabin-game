@@ -1,7 +1,8 @@
 --!strict
 -- Fuse Box: the power dies. Find the fuse in a random built room and carry it back to the
 -- fuse box in the Parlor. Group task: if the fuse isn't in the box when time runs out,
--- everyone still in play is eliminated.
+-- everyone still in play is eliminated. If whoever has it leaves the game, it turns up again
+-- where it was found.
 
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -67,23 +68,43 @@ function FuseBox.start(run: EventRun)
 
 	-- The fuse: floating, turning and glowing over a pool of light, so it can be found in the dark.
 	local floor = fuseSpot()
-	local fuseModel, fuse = EventItems.fuse(folder, CFrame.new(floor + Vector3.new(0, 1.8, 0)))
-	local pool = EventItems.pool(folder, floor, FUSE_COLOR)
-	local pickUp = EventKit.prompt(fuse, "Pick up", "Fuse")
-	pickUp.Triggered:Connect(function(player: Player)
-		if not run.isActive(player) or run.data.carrier then
-			return
+	local fuseModel: Model
+	local function placeFuse()
+		local model, fuse = EventItems.fuse(folder, CFrame.new(floor + Vector3.new(0, 1.8, 0)))
+		fuseModel = model
+		local pool = EventItems.pool(folder, floor, FUSE_COLOR)
+		local pickUp = EventKit.prompt(fuse, "Pick up", "Fuse")
+		pickUp.Triggered:Connect(function(player: Player)
+			if not run.isActive(player) or run.data.carrier then
+				return
+			end
+			local root = EventKit.root(player)
+			if not root then
+				return
+			end
+			run.data.carrier = player
+			run.data.carrierRoot = root
+			pickUp.Enabled = false
+			pool:Destroy()
+			EventItems.carry(model, root, CFrame.new(1.2, 0, -0.8))
+			EventKit.notifyAll(run, `{player.DisplayName} has the fuse. Get it to the fuse box in the Parlor!`)
+		end)
+	end
+	placeFuse()
+
+	-- Whoever had it is gone (left the game, lost their character, or is out): it goes back.
+	task.spawn(function()
+		while not run.over do
+			task.wait(0.5)
+			local carrier = run.data.carrier
+			if carrier and not run.over and (carrier.Parent == nil or not run.isActive(carrier) or EventKit.root(carrier) ~= run.data.carrierRoot) then
+				run.data.carrier = nil
+				run.data.carrierRoot = nil
+				fuseModel:Destroy()
+				placeFuse()
+				EventKit.notifyAll(run, "The fuse has turned up again where it was found.")
+			end
 		end
-		local character = player.Character
-		local root = character and character:FindFirstChild("HumanoidRootPart")
-		if not root or not root:IsA("BasePart") then
-			return
-		end
-		run.data.carrier = player
-		pickUp.Enabled = false
-		pool:Destroy()
-		EventItems.carry(fuseModel, root, CFrame.new(1.2, 0, -0.8))
-		EventKit.notifyAll(run, `{player.DisplayName} has the fuse. Get it to the fuse box in the Parlor!`)
 	end)
 
 	-- The fuse cabinet, on the Parlor's north wall, facing into the room.
