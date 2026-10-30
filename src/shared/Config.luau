@@ -351,6 +351,9 @@ local Config = {
 		EmptyChairChance = 0.3, -- each time you look at an empty chair while you're at the table
 		WhisperPerSecond = 0.004, -- someone whispers your name (about every 4 minutes of walking)
 		KnockPerSecond = 0.006, -- knocks in the walls (not a scare slot; they just happen)
+		BlackoutChance = 0.1, -- each time you walk into another room (when the corner doesn't happen)
+		FootstepsChance = 0.025, -- each half second you're walking
+		CandleChance = 0.004, -- each half second at the table (about every 2 minutes seated)
 	},
 
 	-- Badges (Creator Dashboard > your experience > Engagement > Badges). Paste each badge's id;

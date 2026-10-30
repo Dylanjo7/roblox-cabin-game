@@ -21,6 +21,7 @@ export type Rig = {
 	stride: number, -- 0 standing .. 1 walking .. more when running
 	chase: number, -- 0..1, eased
 	kill: number, -- 0..1, eased: he's got someone
+	duck: number, -- 0..1, eased: stooping under a door frame or a low ceiling
 	t: number,
 	headYaw: number,
 	headRoll: number,
@@ -53,6 +54,7 @@ function HollowManRig.new(scale: number?): Rig
 		stride = 0,
 		chase = 0,
 		kill = 0,
+		duck = 0,
 		t = rng:NextNumber(0, 10),
 		headYaw = 0,
 		headRoll = 0,
@@ -82,15 +84,17 @@ end
 
 -- Pose the figure at `pivot` (his feet, facing -Z). speed: studs per second he's moving at.
 -- chasing: he has seen someone. lookAt: a world point his head turns towards (nil = he twitches).
--- killing: he has caught someone and is over them.
-function HollowManRig.pose(rig: Rig, pivot: CFrame, dt: number, speed: number, chasing: boolean, lookAt: Vector3?, killing: boolean?)
+-- killing: he has caught someone and is over them. duck: 0..1, how far he has to stoop to fit
+-- under what's above him (he's nearly twice your height; doorways aren't).
+function HollowManRig.pose(rig: Rig, pivot: CFrame, dt: number, speed: number, chasing: boolean, lookAt: Vector3?, killing: boolean?, duck: number?)
 	rig.t += dt
 	local t = rig.t
 	local targetStride = math.clamp(speed / WALK_SPEED, 0, 1.4)
 	rig.stride += (targetStride - rig.stride) * math.min(1, dt * 6)
 	rig.chase += ((if chasing then 1 else 0) - rig.chase) * math.min(1, dt * 4)
 	rig.kill += ((if killing then 1 else 0) - rig.kill) * math.min(1, dt * (if killing then 9 else 2))
-	local s, c, k = rig.stride, rig.chase, rig.kill
+	rig.duck += ((duck or 0) - rig.duck) * math.min(1, dt * 8)
+	local s, c, k, d = rig.stride, rig.chase, rig.kill, rig.duck
 	local shake = math.sin(t * 23) * k -- the clutching tremor
 	-- Long legs: a slow cadence that quickens when he runs.
 	rig.phase += dt * (1.2 + speed * 0.55)
@@ -117,11 +121,11 @@ function HollowManRig.pose(rig: Rig, pivot: CFrame, dt: number, speed: number, c
 	local j = rig.joints
 
 	local rot: { [string]: CFrame } = {
-		Body = CFrame.Angles(-(0.05 + 0.1 * s + 0.32 * c * (1 - k) + 0.62 * k) + breathe * 0.015, swing * 0.1 * s, shake * 0.02),
-		LegL = CFrame.Angles(swing * 0.55 * s, 0, 0),
-		LegR = CFrame.Angles(-swing * 0.55 * s, 0, 0),
-		ShinL = CFrame.Angles(-math.max(0, math.cos(p)) * 0.95 * s, 0, 0),
-		ShinR = CFrame.Angles(-math.max(0, -math.cos(p)) * 0.95 * s, 0, 0),
+		Body = CFrame.Angles(-(0.05 + 0.1 * s + 0.32 * c * (1 - k) + 0.62 * k + 0.55 * d * (1 - k)) + breathe * 0.015, swing * 0.1 * s, shake * 0.02),
+		LegL = CFrame.Angles(swing * 0.55 * s + 0.75 * d, 0, 0),
+		LegR = CFrame.Angles(-swing * 0.55 * s + 0.75 * d, 0, 0),
+		ShinL = CFrame.Angles(-math.max(0, math.cos(p)) * 0.95 * s - 1.25 * d, 0, 0),
+		ShinR = CFrame.Angles(-math.max(0, -math.cos(p)) * 0.95 * s - 1.25 * d, 0, 0),
 		ArmL = CFrame.Angles(-swing * 0.4 * s + c * 1.15 * (1 - k) + k * 1.45 + shake * 0.06 + math.sin(t * 0.9) * 0.04, 0, -(0.04 + c * 0.18) + k * 0.32),
 		ArmR = CFrame.Angles(swing * 0.4 * s + c * 1.15 * (1 - k) + k * 1.45 - shake * 0.06 + math.sin(t * 0.9 + 1) * 0.04, 0, 0.04 + c * 0.18 - k * 0.32),
 		ForeL = CFrame.Angles(0.15 + 0.2 * s + c * 0.35 + k * 0.75, 0, 0),
@@ -131,7 +135,7 @@ function HollowManRig.pose(rig: Rig, pivot: CFrame, dt: number, speed: number, c
 		Jaw = CFrame.Angles(-(0.12 + c * 0.45 + k * 0.5 + (math.sin(t * 0.8) * 0.5 + 0.5) * 0.08), 0, math.sin(t * 0.5) * 0.04),
 	}
 
-	local xf: { [string]: CFrame } = { Root = CFrame.new(0, bob, 0) }
+	local xf: { [string]: CFrame } = { Root = CFrame.new(0, bob - 2.2 * d * rig.scale, 0) }
 	for i, name in HollowManModel.JointOrder do
 		local joint = HollowManModel.Joints[name]
 		local parent = xf[joint.parent or "Root"]

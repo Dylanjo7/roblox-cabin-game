@@ -18,22 +18,44 @@ local spinning: { [Instance]: CFrame } = {} -- each one's resting pivot
 local turning: { [Instance]: { rest: CFrame, angle: number } } = {}
 local rocking: { [Instance]: { rest: CFrame, phase: number } } = {}
 
-local function add(inst: Instance)
-	if inst:IsA("PVInstance") then
-		spinning[inst] = inst:GetPivot()
+-- Where a model rests, once it's really here. A client can be told about a model before its
+-- parts arrive (with streaming on, parts load by distance); reading its pivot then gives the
+-- world origin, the middle of the Parlor, and the key and fuse were being dragged there, under
+-- the table, every frame. So: wait until its main part is in.
+local function whenReady(inst: Instance, use: (CFrame) -> ())
+	if not inst:IsA("PVInstance") then
+		return
 	end
+	task.spawn(function()
+		local model = if inst:IsA("Model") then inst else nil
+		local deadline = os.clock() + 30
+		while model and not model.PrimaryPart and inst.Parent and os.clock() < deadline do
+			task.wait(0.1)
+		end
+		if inst.Parent and (not model or model.PrimaryPart) then
+			use((inst :: PVInstance):GetPivot())
+		end
+	end)
+end
+
+local function add(inst: Instance)
+	whenReady(inst, function(rest: CFrame)
+		if CollectionService:HasTag(inst, "EventSpin") then
+			spinning[inst] = rest
+		end
+	end)
 end
 
 local function addTurn(inst: Instance)
-	if inst:IsA("PVInstance") then
-		turning[inst] = { rest = inst:GetPivot(), angle = 0 }
-	end
+	whenReady(inst, function(rest: CFrame)
+		turning[inst] = { rest = rest, angle = 0 }
+	end)
 end
 
 local function addRock(inst: Instance)
-	if inst:IsA("PVInstance") then
-		rocking[inst] = { rest = inst:GetPivot(), phase = math.random() * math.pi * 2 }
-	end
+	whenReady(inst, function(rest: CFrame)
+		rocking[inst] = { rest = rest, phase = math.random() * math.pi * 2 }
+	end)
 end
 
 function Spinners.init()

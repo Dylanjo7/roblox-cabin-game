@@ -12,6 +12,11 @@
 --   The doorway: something tall runs past an open doorway you're looking down.
 --   The empty chair: at the table, look at an empty chair and he's standing behind it.
 --   Your name: whispered, faint, at the edge of the screen.
+--   Blackout: walk into a room and its lights die; in the dark, two embers at the far end of it,
+--     watching you, until the lights come back.
+--   Footsteps: heavy steps right behind you, keeping pace while you walk. Nobody's there.
+--   The Candle: at the table, the Candle on the clock goes out for a moment, and something
+--     breathes.
 --   (And now and then, knocks in the walls; not a scare as such.)
 --   Bought: someone paid (Journal > Favours) to put his face on your screen; you're told who.
 
@@ -36,6 +41,7 @@ local Hud = require(script.Parent.Hud)
 local HollowManRig = require(script.Parent.HollowManRig)
 local HollowManView = require(script.Parent.HollowManView)
 local JournalUI = require(script.Parent.JournalUI)
+local TablePieces = require(script.Parent.TablePieces)
 
 local cfg = Config.Scares
 local Scares = {}
@@ -325,6 +331,13 @@ local function behindYou(look: Vector3)
 	if not y then
 		return
 	end
+	-- And room for all of him: nothing where he'd stand (no wardrobe or wall to clip into).
+	local box = OverlapParams.new()
+	box.FilterType = Enum.RaycastFilterType.Exclude
+	box.FilterDescendantsInstances = { localPlayer.Character :: Instance }
+	if #workspace:GetPartBoundsInBox(CFrame.new(spot.X, y + 5.5, spot.Z), Vector3.new(2.6, 8.5, 2.6), box) > 0 then
+		return
+	end
 	begin()
 	local feet = Vector3.new(spot.X, y, spot.Z)
 	local figure = HollowManView.spawnLocal(CFrame.lookAt(feet, Vector3.new(here.Position.X, y, here.Position.Z)), true, false)
@@ -380,6 +393,112 @@ local function corner(x: number, z: number)
 			end
 		end
 		figure.destroy()
+		busy = false
+	end)
+end
+
+-- Blackout: the lights of the room you've just walked into die, and at the far end of it, two
+-- embers about where his eyes would be, watching you. Then the lights come back on, and nothing.
+local function blackout(x: number, z: number)
+	local here = root()
+	if not here or not cabin[`{x},{z}`] then
+		return
+	end
+	local centre = RoomShapes.cellPosition(x, z)
+	local half = Config.TileSize / 2
+	local dimmed: { Light } = {}
+	for _, light in CollectionService:GetTagged("RoomLight") do
+		local at = light.Parent
+		if light:IsA("Light") and light.Enabled and at and at:IsA("BasePart") and math.abs(at.Position.X - centre.X) < half and math.abs(at.Position.Z - centre.Z) < half then
+			table.insert(dimmed, light)
+		end
+	end
+	if #dimmed == 0 then
+		return
+	end
+	begin()
+	-- The far side of the room from you, at his height.
+	local away = (centre - here.Position) * Vector3.new(1, 0, 1)
+	away = if away.Magnitude > 0.1 then away.Unit else Vector3.zAxis
+	local spot = centre + away * (half - 6)
+	local y = floorBelow(spot) or centre.Y
+	local eyes = Instance.new("Model")
+	eyes.Name = "Embers"
+	local look = CFrame.lookAt(Vector3.new(spot.X, y + 9.4, spot.Z), here.Position + Vector3.new(0, 2, 0))
+	for _, side in { -0.32, 0.32 } do
+		local ember = Instance.new("Part")
+		ember.Shape = Enum.PartType.Ball
+		ember.Size = Vector3.new(0.16, 0.16, 0.16)
+		ember.Color = Color3.fromRGB(255, 120, 60)
+		ember.Material = Enum.Material.Neon
+		ember.Anchored = true
+		ember.CanCollide = false
+		ember.CanQuery = false
+		ember.CastShadow = false
+		ember.CFrame = look * CFrame.new(side, 0, 0)
+		ember.Parent = eyes
+	end
+	Audio.play("flicker", 0.6)
+	for _, light in dimmed do
+		light.Enabled = false
+	end
+	task.delay(0.5, function()
+		eyes.Parent = workspace
+		Audio.play("whisper", 0.45)
+	end)
+	task.delay(2.4, function()
+		eyes:Destroy()
+		Audio.play("flicker", 0.4)
+		for _, light in dimmed do
+			light.Enabled = true
+		end
+		busy = false
+	end)
+end
+
+-- Footsteps: heavy, slow steps a few paces behind you, keeping up while you walk.
+local function footsteps()
+	local here = root()
+	if not here then
+		return
+	end
+	begin()
+	local source = Instance.new("Part")
+	source.Name = "Steps"
+	source.Size = Vector3.one
+	source.Transparency = 1
+	source.Anchored = true
+	source.CanCollide = false
+	source.CanQuery = false
+	source.Parent = workspace
+	task.spawn(function()
+		for _ = 1, 5 do
+			local me = root()
+			if not me then
+				break
+			end
+			local back = me.CFrame.LookVector * Vector3.new(1, 0, 1)
+			back = if back.Magnitude > 0.1 then back.Unit else Vector3.zAxis
+			source.Position = me.Position - back * 7
+			Audio.play("step", 0.3, source, 0.85)
+			task.wait(0.62)
+		end
+		task.wait(1)
+		source:Destroy()
+		busy = false
+	end)
+end
+
+-- The Candle: at the table it goes out, for just long enough.
+local function candleOut()
+	begin()
+	TablePieces.snuff(true)
+	Audio.play("flicker", 0.35)
+	task.delay(0.4, function()
+		Audio.play("whisper", 0.35)
+	end)
+	task.delay(1.6, function()
+		TablePieces.snuff(false)
 		busy = false
 	end)
 end
@@ -543,7 +662,16 @@ function Scares.init(gui: ScreenGui)
 					runner(doorway)
 				elseif rng:NextNumber() < cfg.WhisperPerSecond * 0.5 then
 					whisperName()
+				else
+					local me = root()
+					local walking = me ~= nil and (me.AssemblyLinearVelocity * Vector3.new(1, 0, 1)).Magnitude > 8
+					if walking and rng:NextNumber() < cfg.FootstepsChance then
+						footsteps()
+					end
 				end
+			end
+			if readySeated() and rng:NextNumber() < cfg.CandleChance then
+				candleOut()
 			end
 			-- At the table: a fresh look at an empty chair.
 			local cam = workspace.CurrentCamera
@@ -583,6 +711,8 @@ function Scares.init(gui: ScreenGui)
 			lastCell = key
 			if ready() and rng:NextNumber() < cfg.CornerChance then
 				corner(x, z)
+			elseif ready() and rng:NextNumber() < cfg.BlackoutChance then
+				blackout(x, z)
 			end
 		end
 	end)

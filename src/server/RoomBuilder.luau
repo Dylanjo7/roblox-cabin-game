@@ -259,7 +259,27 @@ local function buildExitDoorSide(side: Model, model: Model, turn: CFrame, e: num
 	door.Parent = model
 	local panel = makePart("Panel", Vector3.new(width, height, 0.4), at(0, height / 2), Color3.fromRGB(52, 36, 26), door)
 	panel.Material = Enum.Material.WoodPlanks
-	makePart("Knob", Vector3.new(0.3, 0.3, 0.3), turn * CFrame.new(d - 0.6, height / 2, inner + 0.25), Color3.fromRGB(150, 120, 60), door).CanCollide = false
+	-- A ledged and braced plank door: two rails and a diagonal brace on the room side, black
+	-- strap hinges, and an iron ring for a handle. (All of it swings with the panel at 3 AM.)
+	local DARK_WOOD = Color3.fromRGB(38, 26, 18)
+	local IRON = Color3.fromRGB(30, 30, 32)
+	local function trim(name: string, size: Vector3, cf: CFrame, color: Color3): Part
+		local p = makePart(name, size, cf, color, door)
+		p.CanCollide = false
+		return p
+	end
+	local low, high = 1.3, height - 1.3
+	for _, y in { low, high } do
+		trim("Rail", Vector3.new(width - 0.3, 0.38, 0.12), at(0, y, 0.26), DARK_WOOD).Material = Enum.Material.Wood
+		trim("Strap", Vector3.new(2.2, 0.16, 0.05), at(-d + 1.2, y, 0.34), IRON).Material = Enum.Material.Metal
+	end
+	local rise = high - low
+	local run = width - 0.9
+	trim("Brace", Vector3.new(math.sqrt(run * run + rise * rise) - 0.3, 0.34, 0.1), at(0, height / 2, 0.25) * CFrame.Angles(0, 0, math.atan2(rise, run)), DARK_WOOD).Material = Enum.Material.Wood
+	trim("Knob", Vector3.new(0.3, 0.3, 0.3), turn * CFrame.new(d - 0.6, height / 2, inner + 0.25), Color3.fromRGB(150, 120, 60))
+	local ring = trim("Ring", Vector3.new(0.06, 0.55, 0.55), turn * CFrame.new(d - 0.6, height / 2 - 0.4, inner + 0.3) * CFrame.Angles(0, math.rad(90), 0), IRON)
+	ring.Shape = Enum.PartType.Cylinder
+	ring.Material = Enum.Material.Metal
 	local boards = Instance.new("Model")
 	boards.Name = "Boards"
 	boards.Parent = door

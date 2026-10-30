@@ -196,6 +196,13 @@ RULES.md is the source of truth. MVP only for now.
   - Lockdown: the key always floats at chest height just inside the door back to the table, labelled within 45 studs (it could end up under a table)
   - Rising Water: 32 s (was 50)
   - Chairs: every chair has a "Sit" prompt (E) that always works (`Table.seatPlayer`, which also clears a stuck seat weld), as well as walking into it
+- [x] R. Third playtest fixes *(written, not yet run in Studio)*
+  - Bug: the fuse and key still showed up under the Parlor table. Not their spawn: each client spins them (`Spinners`) and read their pivot before their parts had arrived (streaming), got the world origin (the middle of the Parlor) and dragged them there every frame. Fixed both ends: the server sets each item's `WorldPivot`, the client waits for the model's main part; the record on the gramophone had the same bug. The cabin project now turns `Workspace.StreamingEnabled` off
+  - 3 AM: wrong exit doors are decoys: the door swings open and he's standing in the doorway (a marker with Killing set); he has you (`EventKit.seize`), then it shuts for the next one. The true door swings open and stays open, then you're outside
+  - Escaped ending: the dead truck starts (shudder, headlights flicker on) and drives away down the road at dawn, the cabin's windows going dark behind it; players are hidden for it (they're in the truck)
+  - Clipping: he stoops under door frames and low ceilings instead of putting his head through them (`HollowManView` raycasts above and just ahead; `HollowManRig` duck); the behind-you scare only happens where there's room for him
+  - Scares: blackout (the room's lights die, two embers watch you from the far end), footsteps keeping pace behind you, the Candle going out at the table (`Config.Scares.BlackoutChance`, `FootstepsChance`, `CandleChance`)
+  - Exit doors: ledged and braced plank doors with strap hinges and a ring handle
 - [ ] C2: clue signs in rooms (lullaby audio still to find)
 - [ ] C3: Journal (M)
 - Clue decisions: the 9 defaults agreed on 2026-10-28 (sign placement, sign shown only while active, second copy re-rolls the spot, Tally 3 rooms 1-5 marks, Doll always appears/fake frowns after 3rd true clue, shared Journal with "Record" prompt, manual cross-out, exits not in deck yet, faked mirror)

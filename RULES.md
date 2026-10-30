@@ -169,7 +169,8 @@ Reaching 3:00 AM isn't a loss. It starts the final escape, whether or not the gr
 1. The clocks strike three (a 10-second cutscene; the 90 seconds start after it). Every built exit room's outside door unseals. Only the true exit's door leads out; the rest are traps.
 2. The Hollow Man bursts in through the front door. He stands in the doorway for 8 seconds, then hunts, a bit slower than in He Walks.
 3. Each player has 90 seconds to reach the exit room they believe is right and go through its door. Unsealed doors glow and are labelled once you're in their room; press **F** at one to go through (its own key, so a nearby Hide or Record prompt can't get in the way).
-4. A player who picks a wrong door, or is caught, is out.
+4. A player who picks a wrong door, or is caught, is out. Every wrong exit is a decoy: its door swings open and he's already standing in the doorway, waiting. He has you, and you're out. Then it shuts again, for the next person who picks it.
+5. The true exit's door swings open on the night and you're through it, out by the truck. If you got out, the ending is the drive away: the dead truck starts, and you leave the pines at dawn.
 
 **Win:** at least one player escapes through the true exit. Everyone who got out is credited with the win.
 

@@ -121,6 +121,7 @@ function EventItems.key(parent: Instance, at: CFrame): (Model, BasePart)
 	glow(handle, Color3.fromRGB(255, 210, 120), 10, 1.2)
 	glint(handle, Color3.fromRGB(255, 230, 160))
 	m.PrimaryPart = handle
+	m.WorldPivot = at -- (see Spinners: a client can see the model before its parts)
 	m.Parent = parent
 	CollectionService:AddTag(m, "EventSpin")
 	return m, handle
@@ -145,6 +146,7 @@ function EventItems.fuse(parent: Instance, at: CFrame): (Model, BasePart)
 	glint(handle, Color3.fromRGB(255, 220, 140))
 	weldTo(m, handle)
 	m.PrimaryPart = handle
+	m.WorldPivot = upright -- (see Spinners)
 	m.Parent = parent
 	CollectionService:AddTag(m, "EventSpin")
 	return m, handle
@@ -290,6 +292,7 @@ function EventItems.gramophone(parent: Instance, base: Vector3, facing: Vector3)
 	rod(record, "Label", 0.27, 0.06, at * CFrame.new(0, 3.59, 0) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(150, 30, 26), Enum.Material.SmoothPlastic)
 	part(record, "Scratch", Vector3.new(0.5, 0.062, 0.03), at * CFrame.new(0.5, 3.585, 0.12) * CFrame.Angles(0, math.rad(20), 0), Color3.fromRGB(120, 120, 126), Enum.Material.SmoothPlastic)
 	record.PrimaryPart = disc
+	record.WorldPivot = disc.CFrame -- (see Spinners)
 	record:SetAttribute("Playing", false)
 	record.Parent = m
 	CollectionService:AddTag(record, "EventTurn")

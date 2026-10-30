@@ -10,7 +10,7 @@
 --     there until the Candle gets away).
 --   three: 3:00 AM. The grandfather clock strikes three, the boards fall off an exit room's
 --     door, and the front door bursts open: he's in the cabin (the hunt starts as it ends).
---   ending: escaped (dawn on the road by the truck), caught (the Candle goes out and he leans
+--   ending: escaped (the dead truck starts and you drive away at dawn), caught (the Candle goes out and he leans
 --     over the table), lost (the cabin's lights go out one by one), never built (the card box).
 -- Each returns false if it couldn't play, so the caller shows the plain text version instead.
 -- The mid-game ones only play while the table is waiting on him (the Clock stage); three plays
@@ -18,6 +18,7 @@
 
 local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
@@ -25,6 +26,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local RoomShapes = require(Shared:WaitForChild("RoomShapes"))
 local Story = require(Shared:WaitForChild("Story"))
+local TruckModel = require(Shared:WaitForChild("TruckModel"))
 
 local Audio = require(script.Parent.Audio)
 local Cinema = require(script.Parent.Cinema)
@@ -451,27 +453,128 @@ local function endingLines(key: string): { Cinema.Line }
 	return lines
 end
 
--- Escaped: dawn coming up over the road by the truck.
+-- Escaped: you drive away. The truck that died at the end of the path coughs and starts, its
+-- headlights come up, and it pulls away down the road as dawn comes up through the pines; behind
+-- it the cabin's windows go dark one by one, and its tail lights shrink into the trees.
 local function escaped(): boolean
 	local outside = workspace:FindFirstChild("Outside")
-	local truck = outside and outside:FindFirstChild("Truck")
-	local at = if truck and truck:IsA("Model") then truck:GetPivot() else CFrame.new(0, 0, 80)
+	local dead = outside and outside:FindFirstChild("Truck")
+	-- Where it starts: the dead truck's spot, or (if a room was built over the path) clear of the
+	-- southernmost room.
+	local startAt: Vector3
+	if dead and dead:IsA("Model") then
+		startAt = dead:GetPivot().Position
+	else
+		local south = Config.ParlorOrigin.Z + Config.TileSize / 2
+		local cabin = workspace:FindFirstChild("Cabin")
+		for _, room in if cabin then cabin:GetChildren() else {} do
+			if room:IsA("Model") then
+				south = math.max(south, room:GetPivot().Position.Z + Config.TileSize / 2)
+			end
+		end
+		startAt = Vector3.new(Config.ParlorOrigin.X - 3, 0, south + 18)
+	end
+	startAt = Vector3.new(startAt.X, 0, startAt.Z)
+	local away = CFrame.new(startAt) * CFrame.Angles(0, math.pi, 0) -- facing down the road (+Z)
+	local truck = TruckModel.build(away, { body = Color3.fromRGB(112, 58, 40), trim = Color3.fromRGB(196, 186, 160), cargo = true })
+	local beams: { Light } = {}
+	for _, inst in truck:GetDescendants() do
+		if inst:IsA("SpotLight") or inst:IsA("PointLight") then
+			table.insert(beams, inst)
+			inst.Enabled = false
+		end
+	end
+	local deadTruck: Model? = if dead and dead:IsA("Model") then dead else nil
+	local savedDead = if deadTruck then deadTruck:GetPivot() else nil
+	local lights: { Light } = {}
+	for _, light in CollectionService:GetTagged("RoomLight") do
+		if light:IsA("Light") and light.Enabled then
+			table.insert(lights, light)
+		end
+	end
+	local out = 0
 	local saved = { ClockTime = Lighting.ClockTime, Brightness = Lighting.Brightness, FogColor = Lighting.FogColor, FogEnd = Lighting.FogEnd, OutdoorAmbient = Lighting.OutdoorAmbient }
-	local road = (at * CFrame.new(0, 2, 40)).Position -- behind the truck, the way back out
+	-- Everyone who got out is in the truck, so nobody's left standing by the road.
+	local function hidePeople(hidden: boolean)
+		for _, player in Players:GetPlayers() do
+			for _, inst in if player.Character then player.Character:GetDescendants() else {} do
+				if inst:IsA("BasePart") or inst:IsA("Decal") then
+					inst.LocalTransparencyModifier = if hidden then 1 else 0
+				end
+			end
+		end
+	end
+
+	-- How far down the road it is at t: still for a moment, then pulling away, faster and faster.
+	local GO = 3.2
+	local function along(t: number): number
+		local u = math.max(0, t - GO)
+		return math.min(0.5 * 5 * u * u, 28 * u)
+	end
+	local function truckAt(t: number): CFrame
+		local moving = if t > GO then 1 else 0
+		return away * CFrame.new(0, math.sin(t * 9) * 0.05 * moving, -along(t))
+	end
+	local cabinAt = Config.ParlorOrigin + Vector3.new(0, 7, 0)
 	return Cinema.play({
-		length = 16,
+		length = 18,
 		title = Story.Endings.escaped.title,
 		titleAt = 0.8,
-		camera = shots({
-			{ from = 0, to = 16, a = CFrame.lookAt((at * CFrame.new(-7, 3, -10)).Position, road), b = CFrame.lookAt((at * CFrame.new(-4, 2.2, 4)).Position, road) },
-		}),
+		camera = function(t: number): CFrame
+			local body = truckAt(t).Position + Vector3.new(0, 2.5, 0)
+			if t < 4 then
+				-- Beside it as it turns over.
+				local eye = (away * CFrame.new(-7, 3.2, -6)).Position
+				return CFrame.lookAt(eye:Lerp((away * CFrame.new(-6, 2.6, -2)).Position, ease(t / 4)), body)
+			elseif t < 11 then
+				-- From the path, watching it go.
+				local eye = (away * CFrame.new(-3, 3.5, 9)).Position
+				return CFrame.lookAt(eye, body:Lerp(body + Vector3.new(0, 1, 0), (t - 4) / 7))
+			end
+			-- High over the road: the tail lights into the pines, the dark cabin behind.
+			local u = ease((t - 11) / 7)
+			local eye = (away * CFrame.new(10, 16 + u * 6, 14)).Position
+			return CFrame.lookAt(eye, body:Lerp(cabinAt, 0.25 + u * 0.15))
+		end,
 		lines = endingLines("escaped"),
 		onStart = function()
 			Audio.play("ending", 0.5)
-			local info = TweenInfo.new(14, Enum.EasingStyle.Sine)
+			truck.Parent = workspace
+			hidePeople(true)
+			if deadTruck and savedDead then
+				deadTruck:PivotTo(savedDead + Vector3.new(0, -500, 0)) -- (it's this one, running now)
+			end
+			local info = TweenInfo.new(16, Enum.EasingStyle.Sine)
 			TweenService:Create(Lighting, info, { ClockTime = 6.2, Brightness = 1.8, FogColor = Color3.fromRGB(190, 176, 168), FogEnd = 400, OutdoorAmbient = Color3.fromRGB(120, 112, 118) }):Play()
 		end,
+		onFrame = function(t: number)
+			truck:PivotTo(truckAt(t))
+			-- It starts first time: a shudder, the headlights flicker, then they come up.
+			if t > 1.2 then
+				local on = t > 2.2 or (t > 1.5 and t < 1.7)
+				for _, light in beams do
+					light.Enabled = on
+				end
+			end
+			if t > 1.2 and t < 2.2 then
+				truck:PivotTo(truckAt(t) * CFrame.new(math.sin(t * 60) * 0.05, 0, 0))
+			end
+			-- Behind it, one window after another goes dark.
+			local want = math.clamp(math.floor((t - 6) / 0.35), 0, #lights)
+			while out < want do
+				out += 1
+				lights[out].Enabled = false
+			end
+		end,
 		onEnd = function()
+			truck:Destroy()
+			hidePeople(false)
+			if deadTruck and savedDead then
+				deadTruck:PivotTo(savedDead)
+			end
+			for _, light in lights do
+				light.Enabled = true
+			end
 			for prop, value in saved do
 				(Lighting :: any)[prop] = value
 			end

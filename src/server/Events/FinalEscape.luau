@@ -15,6 +15,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local CardData = require(Shared:WaitForChild("CardData"))
 local Config = require(Shared:WaitForChild("Config"))
+local HollowManModel = require(Shared:WaitForChild("HollowManModel"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
 local RoomShapes = require(Shared:WaitForChild("RoomShapes"))
 local Types = require(Shared:WaitForChild("Types"))
@@ -54,17 +55,70 @@ local function anyoneLeft(run: EventRun): boolean
 	return false
 end
 
-local function escape(run: EventRun, player: Player, cell: MapGrid.Cell)
+-- Swing an exit door open into its room (about its hinge, the edge away from the knob), or shut
+-- again. Its parts' closed places are kept on the run so it can always go back.
+local function swing(run: EventRun, cell: MapGrid.Cell, door: Model, open: boolean)
+	local panel = door:FindFirstChild("Panel")
+	if not panel or not panel:IsA("BasePart") then
+		return
+	end
+	local rests: { [Model]: { [BasePart]: CFrame } } = run.data.doorRests or {}
+	run.data.doorRests = rests
+	local rest = rests[door]
+	if not rest then
+		rest = {}
+		for _, p in door:GetDescendants() do
+			if p:IsA("BasePart") then
+				rest[p] = p.CFrame
+			end
+		end
+		rests[door] = rest
+	end
+	local closed = rest[panel] or panel.CFrame
+	local hinge = closed * CFrame.new(-panel.Size.X / 2, 0, 0)
+	-- Whichever way brings the door into the room, not out through the wall.
+	local centre = RoomShapes.cellPosition(cell.x, cell.z)
+	local function turned(angle: number): CFrame
+		return hinge * CFrame.Angles(0, angle, 0) * hinge:Inverse()
+	end
+	local widest = math.rad(80)
+	local sign = if ((turned(widest) * closed).Position - centre).Magnitude < ((turned(-widest) * closed).Position - centre).Magnitude then 1 else -1
+	task.spawn(function()
+		for step = 1, 10 do
+			local k = step / 10
+			local angle = widest * sign * (if open then k else 1 - k)
+			local turn = turned(angle)
+			for p, cf in rest do
+				if p.Parent then
+					p.CFrame = turn * cf
+				end
+			end
+			task.wait(0.04)
+		end
+	end)
+end
+
+-- The true exit: the door swings open on the night (and stays open), and you're through it and
+-- out by the truck.
+local function escape(run: EventRun, player: Player, cell: MapGrid.Cell, door: Model)
 	run.safe[player] = true
 	RunStats.escaped(player)
 	table.insert(escapedNames, player.DisplayName)
 	table.insert(escapedPlayers, player)
-	local character = player.Character
-	if character then
-		character:PivotTo(outside())
+	local opened: { [Model]: boolean } = run.data.opened or {}
+	run.data.opened = opened
+	if not opened[door] then
+		opened[door] = true
+		swing(run, cell, door, true)
 	end
+	task.delay(0.5, function()
+		local character = player.Character
+		if character then
+			character:PivotTo(outside())
+		end
+	end)
 	local name = CardData.get(cell.id).name
-	Remotes.notify(player, `The {name} door gives way. Cold air. The road. You're out!`)
+	Remotes.notify(player, `The {name} door gives way. Cold air. The road. The truck. You're out!`)
 	for _, p in run.players do
 		if p ~= player then
 			Remotes.notify(p, `{player.DisplayName} got out through the {name}.`)
@@ -75,13 +129,42 @@ local function escape(run: EventRun, player: Player, cell: MapGrid.Cell)
 	end
 end
 
-local function trap(run: EventRun, player: Player, cell: MapGrid.Cell)
+-- A wrong door. It swings open, and he's standing right there in the doorway, waiting: he has
+-- you (held a moment while he gets you, then you're out). Then it shuts on him again, ready for
+-- the next one who picks it.
+local function trap(run: EventRun, player: Player, cell: MapGrid.Cell, door: Model)
 	local name = CardData.get(cell.id).name
-	Remotes.notify(player, `The {name} door opens onto black pines... and something was waiting on the other side.`)
-	run.eliminate(player)
-	if not anyoneLeft(run) then
-		run.complete()
+	local panel = door:FindFirstChild("Panel")
+	if not panel or not panel:IsA("BasePart") then
+		run.eliminate(player)
+		return
 	end
+	swing(run, cell, door, true)
+	local centre = RoomShapes.cellPosition(cell.x, cell.z)
+	local out = (panel.Position - centre) * Vector3.new(1, 0, 1)
+	out = if out.Magnitude > 0.1 then out.Unit else Vector3.zAxis
+	local feet = Vector3.new(panel.Position.X, centre.Y, panel.Position.Z) + out * 0.6
+	local decoy = HollowManModel.marker(CFrame.lookAt(feet, feet - out), run.data.folder or workspace)
+	decoy:SetAttribute("Killing", true)
+	EventKit.sound("caught", panel, 1)
+	Remotes.notify(player, `The {name} door opens... and he's standing right there. Wrong door.`)
+	for _, p in run.players do
+		if p ~= player and run.isActive(p) then
+			Remotes.notify(p, `{player.DisplayName} opened the {name} door. He was waiting behind it. That's not the way out.`)
+		end
+	end
+	if not EventKit.seize(run, player, feet) then
+		run.eliminate(player)
+	end
+	task.delay(Config.Events.KillHoldSeconds + 1.2, function()
+		decoy:Destroy()
+		if not run.over then
+			swing(run, cell, door, false)
+			if not anyoneLeft(run) then
+				run.complete()
+			end
+		end
+	end)
 end
 
 function FinalEscape.start(run: EventRun)
@@ -145,9 +228,9 @@ function FinalEscape.start(run: EventRun)
 						return -- (he has them)
 					end
 					if trueExit and cell.id == trueExit.id then
-						escape(run, player, cell)
+						escape(run, player, cell, door :: Model)
 					else
-						trap(run, player, cell)
+						trap(run, player, cell, door :: Model)
 					end
 				end)
 				table.insert(prompts, prompt)

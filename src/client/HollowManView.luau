@@ -98,6 +98,33 @@ function HollowManView.positions(): { Vector3 }
 	return out
 end
 
+-- How far he has to stoop to fit under whatever is over him, or just ahead of him: a door
+-- frame's head, a low beam. (He's about TALL studs tall; doorways are 9.)
+local TALL = 10.5
+local overhead = RaycastParams.new()
+overhead.FilterType = Enum.RaycastFilterType.Exclude
+local function stoop(figure: Figure): number
+	local ignore: { Instance } = { figure.rig.model }
+	for _, p in Players:GetPlayers() do
+		if p.Character then
+			table.insert(ignore, p.Character)
+		end
+	end
+	if figure.marker then
+		table.insert(ignore, figure.marker)
+	end
+	overhead.FilterDescendantsInstances = ignore
+	local lowest = math.huge
+	for _, ahead in { 0, 2.5 } do
+		local from = (figure.pivot * CFrame.new(0, 4, -ahead)).Position
+		local hit = workspace:Raycast(from, Vector3.new(0, TALL - 4 + 0.5, 0), overhead)
+		if hit then
+			lowest = math.min(lowest, hit.Position.Y - figure.pivot.Position.Y)
+		end
+	end
+	return if lowest == math.huge then 0 else math.clamp((TALL + 0.3 - lowest) / 3, 0, 1)
+end
+
 local function headPosition(): Vector3?
 	local character = localPlayer.Character
 	local head = character and character:FindFirstChild("Head")
@@ -133,7 +160,7 @@ function HollowManView.init()
 				killing = marker:GetAttribute("Killing") == true
 				watch = marker:GetAttribute("Watch") == true and not killing
 			end
-			HollowManRig.pose(figure.rig, figure.pivot, dt, figure.speed, chasing, if watch then head else nil, killing)
+			HollowManRig.pose(figure.rig, figure.pivot, dt, figure.speed, chasing, if watch then head else nil, killing, stoop(figure))
 		end
 	end)
 end
